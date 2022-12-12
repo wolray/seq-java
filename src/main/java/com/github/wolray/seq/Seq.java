@@ -389,10 +389,6 @@ public interface Seq<T> {
         });
     }
 
-    default void assertTo(String sep, String s) {
-        assert join(sep).equals(s);
-    }
-
     default <E> E fold(E init, BiFunction<E, T, E> function) {
         return evalStateful(init, (acc, t) -> acc.it = function.apply(acc.it, t));
     }
@@ -692,6 +688,14 @@ public interface Seq<T> {
 
     default String join(String sep, Function<T, String> function) {
         return feed(new StringJoiner(sep), (j, t) -> j.add(function.apply(t))).toString();
+    }
+
+    default void assertTo(String s) {
+        assertTo(",", s);
+    }
+
+    default void assertTo(String sep, String s) {
+        assert join(sep).equals(s);
     }
 
     default void printAll() {
