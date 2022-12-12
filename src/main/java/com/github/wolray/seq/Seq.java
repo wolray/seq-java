@@ -402,7 +402,7 @@ public interface Seq<T> {
     }
 
     default void assertTo(String sep, String s) {
-        assert s.equals(join(sep));
+        assert join(sep).equals(s);
     }
 
     default <E> E fold(E init, BiFunction<E, T, E> function) {

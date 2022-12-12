@@ -89,4 +89,38 @@ public class SeqTest {
         assert list.size() == 3;
         list.assertTo(",", "3,4,5");
     }
+
+    @Test
+    public void testTree() {
+        Node n0 = new Node(0);
+        Node n1 = new Node(1);
+        Node n2 = new Node(2);
+        Node n3 = new Node(3);
+        Node n4 = new Node(4);
+        Node n5 = new Node(5);
+        n0.left = n1;
+        n0.right = n2;
+        n1.left = n3;
+        n1.right = n4;
+        n2.left = n5;
+        Seq<Node> seq = Seq.ofTree(n0, n -> c -> {
+            if (n.left != null) {
+                c.accept(n.left);
+            }
+            if (n.right != null) {
+                c.accept(n.right);
+            }
+        });
+        seq.map(n -> n.value).assertTo(",", "0,1,3,4,2,5");
+    }
+
+    static class Node {
+        final int value;
+        Node left;
+        Node right;
+
+        Node(int value) {
+            this.value = value;
+        }
+    }
 }
