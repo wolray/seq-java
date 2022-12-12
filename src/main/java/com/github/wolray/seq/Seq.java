@@ -106,22 +106,6 @@ public interface Seq<T> {
         };
     }
 
-    static Seq<Integer> range(int ub) {
-        return range(0, ub, 1);
-    }
-
-    static Seq<Integer> range(int start, int ub) {
-        return range(start, ub, 1);
-    }
-
-    static Seq<Integer> range(int start, int ub, int step) {
-        return c -> {
-            for (int i = start; i < ub; i += step) {
-                c.accept(i);
-            }
-        };
-    }
-
     static <T> Seq<T> repeat(int n, T t) {
         return c -> {
             for (int i = 0; i < n; i++) {
@@ -135,6 +119,10 @@ public interface Seq<T> {
     }
 
     static <T> void nothing(T t) {}
+
+    default IntSeq mapToInt(ToIntFunction<T> function) {
+        return c -> eval(t -> c.accept(function.applyAsInt(t)));
+    }
 
     default <E> Seq<E> map(Function<T, E> function) {
         return c -> eval(t -> c.accept(function.apply(t)));

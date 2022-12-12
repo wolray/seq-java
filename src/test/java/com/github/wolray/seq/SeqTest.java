@@ -21,10 +21,17 @@ public class SeqTest {
         seq.takeWhile(predicate).assertTo(",", "0,2,4");
         seq.take(5).assertTo(",", "0,2,4,1,6");
         seq.take(5).drop(2).assertTo(",", "4,1,6");
-        Seq.tillNull(() -> 1).take(4).assertTo(",", "1,1,1,1");
-        Seq.tillNull(() -> 1).take(5).assertTo(",", "1,1,1,1,1");
+
+        Seq<Integer> token1 = Seq.tillNull(() -> 1).take(5);
+        token1.assertTo(",", "1,1,1,1,1");
+        token1.assertTo(",", "1,1,1,1,1");
+        IntSeq token2 = IntSeq.gen(() -> 1).take(5);
+        token2.boxed().assertTo(",", "1,1,1,1,1");
+        token2.boxed().assertTo(",", "1,1,1,1,1");
+
         Seq.repeat(5, 1).assertTo(",", "1,1,1,1,1");
-        Seq.range(0, 10, 2).assertTo(",", "0,2,4,6,8");
+        IntSeq.repeat(5, 1).boxed().assertTo(",", "1,1,1,1,1");
+        IntSeq.range(0, 10, 2).boxed().assertTo(",", "0,2,4,6,8");
     }
 
     @Test
@@ -44,24 +51,40 @@ public class SeqTest {
 
     @Test
     public void testYield() {
-        Seq<Integer> fib = Seq.gen(1, 1, Integer::sum).take(10);
-        fib.assertTo(",", "1,1,2,3,5,8,13,21,34,55");
-        fib.assertTo(",", "1,1,2,3,5,8,13,21,34,55");
-        Seq<Integer> quad = Seq.gen(1, i -> i * 2).take(10);
-        quad.assertTo(",", "1,2,4,8,16,32,64,128,256,512");
-        quad.assertTo(",", "1,2,4,8,16,32,64,128,256,512");
+        Seq<Integer> fib1 = Seq.gen(1, 1, Integer::sum).take(10);
+        fib1.assertTo(",", "1,1,2,3,5,8,13,21,34,55");
+        fib1.assertTo(",", "1,1,2,3,5,8,13,21,34,55");
+        IntSeq fib2 = IntSeq.gen(1, 1, Integer::sum).take(10);
+        fib2.boxed().assertTo(",", "1,1,2,3,5,8,13,21,34,55");
+        fib2.boxed().assertTo(",", "1,1,2,3,5,8,13,21,34,55");
+
+        Seq<Integer> quad1 = Seq.gen(1, i -> i * 2).take(10);
+        quad1.assertTo(",", "1,2,4,8,16,32,64,128,256,512");
+        quad1.assertTo(",", "1,2,4,8,16,32,64,128,256,512");
+        IntSeq quad2 = IntSeq.gen(1, i -> i * 2).take(10);
+        quad2.boxed().assertTo(",", "1,2,4,8,16,32,64,128,256,512");
+        quad2.boxed().assertTo(",", "1,2,4,8,16,32,64,128,256,512");
 
         List<Integer> list1 = Arrays.asList(10, 20, 30);
         List<Integer> list2 = Arrays.asList(1, 2, 3);
-        Seq<Integer> seq = c -> {
+        Seq<Integer> cart1 = c -> {
             for (Integer i1 : list1) {
                 for (Integer i2 : list2) {
                     c.accept(i1 + i2);
                 }
             }
         };
-        seq.assertTo(",", "11,12,13,21,22,23,31,32,33");
-        seq.assertTo(",", "11,12,13,21,22,23,31,32,33");
+        cart1.assertTo(",", "11,12,13,21,22,23,31,32,33");
+        cart1.assertTo(",", "11,12,13,21,22,23,31,32,33");
+        IntSeq cart2 = c -> {
+            for (Integer i1 : list1) {
+                for (Integer i2 : list2) {
+                    c.accept(i1 + i2);
+                }
+            }
+        };
+        cart2.boxed().assertTo(",", "11,12,13,21,22,23,31,32,33");
+        cart2.boxed().assertTo(",", "11,12,13,21,22,23,31,32,33");
     }
 
     @Test
