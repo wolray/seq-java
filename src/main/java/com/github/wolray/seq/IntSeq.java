@@ -40,10 +40,6 @@ public interface IntSeq {
         return a[0];
     }
 
-    default Seq<Integer> boxed() {
-        return c -> eval(c::accept);
-    }
-
     static IntSeq of(int... ts) {
         return c -> {
             for (int t : ts) {
@@ -107,6 +103,10 @@ public interface IntSeq {
 
     static IntSeq empty() {
         return c -> {};
+    }
+
+    default Seq<Integer> boxed() {
+        return c -> eval(c::accept);
     }
 
     default <E> Seq<E> map(IntFunction<E> function) {
@@ -262,9 +262,5 @@ public interface IntSeq {
 
     interface IntBiConsumer<E> {
         void accept(E e, int t);
-    }
-
-    interface IntBiFunction<E> {
-        E apply(E e, int t);
     }
 }
