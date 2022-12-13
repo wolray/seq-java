@@ -128,16 +128,6 @@ public interface Seq<T> {
         return c -> eval(t -> c.accept(function.apply(t)));
     }
 
-    default <E> Seq<E> map(int skip, ContextFunction<T, E> function) {
-        return c -> evalIndexed((i, t) -> {
-            if (i > skip) {
-                c.accept(function.apply(t));
-            } else if (i == skip) {
-                function.onFirst(t);
-            }
-        });
-    }
-
     default <E> Seq<E> mapNotNull(Function<T, E> function) {
         return c -> eval(t -> {
             E e = function.apply(t);
@@ -580,7 +570,7 @@ public interface Seq<T> {
     }
 
     @SuppressWarnings("unchecked")
-    default <E> E[] toArray(IntFunction<E[]> generator) {
+    default <E> E[] toArrayTo(IntFunction<E[]> generator) {
         List<T> list = toBatchList();
         E[] res = generator.apply(list.size());
         int i = 0;
@@ -732,10 +722,6 @@ public interface Seq<T> {
 
     interface IndexedConsumer<T> {
         void accept(int i, T t);
-    }
-
-    interface ContextFunction<T, E> extends Function<T, E> {
-        void onFirst(T t);
     }
 
     interface ParallelSeq<T> extends Seq<T> {}

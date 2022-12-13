@@ -1,6 +1,7 @@
 package com.github.wolray.seq;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * @author wolray
@@ -8,7 +9,7 @@ import java.util.function.Consumer;
 public abstract class SafeSeq<T> implements Seq<T> {
     Class<? extends Exception> errorType;
 
-    public Seq<T> ignore(Class<? extends Exception> type) {
+    public SafeSeq<T> ignore(Class<? extends Exception> type) {
         errorType = type;
         return this;
     }
@@ -27,5 +28,29 @@ public abstract class SafeSeq<T> implements Seq<T> {
                 }
             }
         };
+    }
+
+    @Override
+    public <E> Seq<E> map(Function<T, E> function) {
+        return map(0, function);
+    }
+
+    public <E> Seq<E> map(int skip, Function<T, E> function) {
+        return c -> evalIndexed((i, t) -> {
+            if (i > skip || i == skip && !isProcessed(function, t)) {
+                c.accept(function.apply(t));
+            }
+        });
+    }
+
+    private static <T, E> boolean isProcessed(Function<T, E> function, T t) {
+        if (function instanceof ContextFunction) {
+            return ((ContextFunction<T, E>)function).preprocess(t);
+        }
+        return false;
+    }
+
+    public interface ContextFunction<T, E> extends Function<T, E> {
+        boolean preprocess(T t);
     }
 }
