@@ -126,14 +126,7 @@ public class SeqTest {
         n1.left = n3;
         n1.right = n4;
         n2.left = n5;
-        Seq<Node> seq = Seq.ofTree(n0, n -> c -> {
-            if (n.left != null) {
-                c.accept(n.left);
-            }
-            if (n.right != null) {
-                c.accept(n.right);
-            }
-        });
+        Seq<Node> seq = Seq.ofTree(n0, n -> Seq.of(n.left, n.right));
         seq.map(n -> n.value).assertTo("0,1,3,4,2,5");
     }
 

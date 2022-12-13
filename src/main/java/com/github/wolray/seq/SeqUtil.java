@@ -30,6 +30,9 @@ public class SeqUtil {
     }
 
     public static <N> void scanTree(Consumer<N> c, N node, Function<N, Seq<N>> sub) {
+        if (node == null) {
+            return;
+        }
         c.accept(node);
         sub.apply(node).eval(n -> scanTree(c, n, sub));
     }
