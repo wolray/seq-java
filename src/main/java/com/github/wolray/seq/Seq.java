@@ -333,8 +333,7 @@ public interface Seq<T> {
     }
 
     default Seq<List<T>> permute(boolean inplace) {
-        List<T> list = toArrayList();
-        return c -> SeqUtil.permute(c, list, 0, inplace);
+        return c -> SeqUtil.permute(c, toArrayList(), 0, inplace);
     }
 
     default <E> Seq<Pair<T, E>> zip(Iterable<E> iterable) {

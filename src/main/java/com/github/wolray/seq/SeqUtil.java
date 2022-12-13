@@ -30,14 +30,13 @@ public class SeqUtil {
     }
 
     public static <N> void scanTree(Consumer<N> c, N node, Function<N, Seq<N>> sub) {
-        if (node == null) {
-            return;
+        if (node != null) {
+            c.accept(node);
+            sub.apply(node).eval(n -> scanTree(c, n, sub));
         }
-        c.accept(node);
-        sub.apply(node).eval(n -> scanTree(c, n, sub));
     }
 
-    public static <T> void permute(Consumer<List<T>> c, List<T> list, int i, boolean inplace) {
+    public static <T> void permute(Consumer<List<T>> c, ArrayList<T> list, int i, boolean inplace) {
         int n = list.size();
         if (i == n) {
             c.accept(inplace ? list : new ArrayList<>(list));
