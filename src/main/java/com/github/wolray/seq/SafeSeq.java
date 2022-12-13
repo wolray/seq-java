@@ -14,7 +14,7 @@ public abstract class SafeSeq<T> implements Seq<T> {
         return this;
     }
 
-    public static <T> SafeSeq<T> of(WithCe.Consumer<Consumer<T>> seq) {
+    public static <T> SafeSeq<T> of(WithCe.Seq<T> seq) {
         return new SafeSeq<T>() {
             @Override
             public void eval(Consumer<T> consumer) {

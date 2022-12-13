@@ -26,6 +26,10 @@ public interface WithCe {
         T get() throws Exception;
     }
 
+    interface Seq<T> {
+        void accept(java.util.function.Consumer<T> consumer) throws Exception;
+    }
+
     interface Iterable<T> {
         Iterator<T> iterator() throws Exception;
     }
@@ -78,32 +82,5 @@ public interface WithCe {
                 throw new RuntimeException(e);
             }
         };
-    }
-
-    static <T extends AutoCloseable> void safeAccept(T t, Consumer<T> consumer) throws Exception {
-        safeApply(t, it -> {
-            consumer.accept(it);
-            return null;
-        });
-    }
-
-    static <T extends AutoCloseable, E> E safeApply(T t, Function<T, E> function) throws Exception {
-        Throwable throwable = null;
-        try {
-            return function.apply(t);
-        } catch (Exception e) {
-            throwable = e;
-            throw e;
-        } finally {
-            if (throwable != null) {
-                try {
-                    t.close();
-                } catch (Throwable e) {
-                    throwable.addSuppressed(e);
-                }
-            } else {
-                t.close();
-            }
-        }
     }
 }
