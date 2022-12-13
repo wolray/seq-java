@@ -9,6 +9,7 @@ import java.util.function.*;
  */
 public interface IntSeq {
     IntConsumer nothing = t -> {};
+    IntSeq empty = c -> {};
 
     void eval(IntConsumer consumer);
 
@@ -99,10 +100,6 @@ public interface IntSeq {
                 c.accept(value);
             }
         };
-    }
-
-    static IntSeq empty() {
-        return c -> {};
     }
 
     default Seq<Integer> boxed() {
