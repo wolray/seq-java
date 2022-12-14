@@ -1,24 +1,24 @@
 # Seq for Java
 
-This project provides a new `Stream` like API, called `Seq`. It looks very much like `Sequence` of the Kotlin language, while implemented by pure Java with a totally different mechanism.
+This project provides a new streaming API, called `Seq`. It looks very much like `Sequence` of the Kotlin language, while implemented by a totally different mechanism and wrote in pure Java.
 
 ## Definition
 
-Unlike most streaming API implementations, `Seq` is not based on `Iterator`. It only requires a single `Consumer -> void` interface. While `Iterator` needs both `next` and `hasNext`, which makes them hard to adapt for procedural languages. Here is the definition of `Seq`:
+Unlike most streaming API implementations, `Seq` is not based on `Iterator`. It only requires a single `Consumer -> void` interface. While `Iterator` needs both `next` and `hasNext`, which makes them hard to adapt for some procedural languages. Here is the definition of `Seq`:
 ```java
 public interface Seq<T> {
     void eval(Consumer<T> consumer);
 }
 ```
-This `eval` is the only abstract interface of `Seq`, and is naturally implemented (and inspired) by `Iterable`'s `forEach`. It is so light-weighted and low-level that it can be implemented to nearly any language, as long as the language
-supports closure.
+This `eval` is the only abstract interface of `Seq`, and is naturally implemented (and inspired) by `Iterable`'s `forEach`. It is so simple and low-level that it can be implemented to nearly any language, as long as the language
+supports closures.
 
 ## Features
 
 * Powerful and complete streaming API, **FASTER** than Java `Stream` and Kotlin `Sequence`.
-* **GENERATOR** ability like `yield` in Python, Javascript, Kotlin, C# and so on. Coroutines or CPS (Continuation-Passing-Style) are **NOT** required.
+* **GENERATOR** ability like `yield` in Python, Javascript, Kotlin, C# and so on. Coroutines or CPS (Continuation-Passing-Style) transformation are **NOT** required.
 
-For the first time in history, you can do thread-free `yield` in Java, but not just Java. This API is applicable to any closure-supported language. 
+For the first time, you can do actual generator `yield` in Java, and not just Java. This API is applicable to any closure-supported language.
 
 ## API
 
@@ -51,83 +51,84 @@ Seq<Integer> seq = Seq.tillNull(() -> 1); // 1, 1, 1, ...
 Seq<Integer> seq = Seq.gen(1, i -> i * 2); // 1, 2, 4, 8, 16, ...
 ```
 #### Endless two-seeds recursion
-Fibonnaci numbers
+Fibonnaci numbers.
 ```java
 Seq<Integer> seq = Seq.gen(1, 1, Integer::sum); // 1, 1, 2, 3, 5, 8, ...
 ```
-#### By generator
-No additional keyword like `yield` is needed, just a simple lambda expression accepting a normal `Consumer c` as parameter.
+#### By GENERATOR
+This is my favorite part, and the most beautiful feature. Using a generator, all you need to do is write a simple lambda block accepting a normal `Consumer c` as parameter. The `Consumer`'s `accept` method will play the `yield` role.
 ```java
 // 1, 2, 4, 8, 16, ...
 Seq<Integer> seq = c -> {
     int i = 1;
     c.accept(i);
-    // don't worry to write an endless loop inside a generator
+    // don't worry to write an endless loop inside the generator
     while (true) {
         c.accept(i = i * 2);
     }
 };
 ```
+See? Still your familiar old classic Java, just with a brand-new meaning now.
 
 #### By a tree
-Preorder traversing a tree in one line
+Preorder traversing a tree in one line, which is also implemented by generator. In fact, any recursive procedure like DFS can be easily convert into a `seq`.
 ```java
 Seq<Node> seq = Seq.ofTree(root, n -> Seq.of(n.left, n.right));
 ```
 ### Lazy mapping operations
-Given a `seq` of `[1, 1, 2, 3, 4]`
+As a streaming API, `Seq` provides standard lazy mapping functions for chaining operations. Given an example of `[1, 1, 2, 3, 4]`.
 ```java
 Seq<Integer> seq = Seq.of(1, 1, 2, 3, 4);
 ```
 #### map
-Same as Java `stream.map` and Kotlin `sequence.map` 
+Same as Java `stream.map` and Kotlin `sequence.map` .
 ```java
-Seq<Integer> newSeq = seq.map(i -> i + 10); // 11, 11, 12, 13, 14
+seq = seq.map(i -> i + 10); // 11, 11, 12, 13, 14
 ```
 #### filter
-Same as Java `stream.filter` and Kotlin `sequence.filter`
+Same as Java `stream.filter` and Kotlin `sequence.filter`.
 ```java
-Seq<Integer> newSeq = seq.filter(i -> i % 2 > 0); // 1, 1, 3
+seq = seq.filter(i -> i % 2 > 0); // 1, 1, 3
 ```
 #### take
-Same as Java `stream.limit` and Kotlin `sequence.take`
+Same as Java `stream.limit` and Kotlin `sequence.take`.
 ```java
-Seq<Integer> newSeq = seq.take(3); // 1, 1, 2
+seq = seq.take(3); // 1, 1, 2
 ```
 #### drop
-Same as Java `stream.skip` and Kotlin `sequence.drop`
+Same as Java `stream.skip` and Kotlin `sequence.drop`.
 ```java
-Seq<Integer> newSeq = seq.drop(3); // 3, 4
+seq = seq.drop(3); // 3, 4
 ```
 #### takeWhile
-Same as Java `stream.takeWhile` and Kotlin `sequence.takeWhile`
+Same as Java `stream.takeWhile` and Kotlin `sequence.takeWhile`.
 ```java
-Seq<Integer> newSeq = seq.takeWhile(i -> i < 3); // 1, 1, 2
+seq = seq.takeWhile(i -> i < 3); // 1, 1, 2
 ```
 #### dropWhile
-Same as Java `stream.dropWhile` and Kotlin `sequence.dropWhile`
+Same as Java `stream.dropWhile` and Kotlin `sequence.dropWhile`.
 ```java
-Seq<Integer> newSeq = seq.dropWhile(i -> i < 3); // 3, 4
+seq = seq.dropWhile(i -> i < 3); // 3, 4
 ```
 #### distinct
-Same as Java `stream.distinct` and Kotlin `sequence.distinct`
+Same as Java `stream.distinct` and Kotlin `sequence.distinct`.
 ```java
-Seq<Integer> newSeq = seq.distinct(); // 1, 2, 3, 4
+seq = seq.distinct(); // 1, 2, 3, 4
 ```
 #### distinctBy
-Same as Kotlin `sequence.distinctBy`
+Same as Kotlin `sequence.distinctBy`.
 ```java
-Seq<Integer> newSeq = seq.distinctBy(i -> i % 2); // 1, 2
+seq = seq.distinctBy(i -> i % 2); // 1, 2
 ```
 #### flatMap
-Same as Java `stream.flatMap` and Kotlin `sequence.flatMap`
+Same as Java `stream.flatMap` and Kotlin `sequence.flatMap`.
 ```java
-Seq<Integer> newSeq = seq.flatMap(i -> Seq.repeat(2, i)); // 1, 1, 1, 1, 2, 2, 3, 3, 4, 4
+seq = seq.flatMap(i -> Seq.repeat(2, i)); // 1, 1, 1, 1, 2, 2, 3, 3, 4, 4
 ```
 #### runningFold
 Accumulation on every element. Same as Kotlin `sequence.runningFold`.
 ```java
-Seq<Integer> newSeq = seq.runningFold(0, Integer::sum); // 1, 2, 4, 7, 11
+seq = seq.runningFold(0, Integer::sum); // 1, 2, 4, 7, 11
 ```
 #### withIndex
 Same as Kotlin `sequence.withIndex`.
@@ -148,23 +149,23 @@ Seq<String> s2 = seq.zip(Arrays.asList("a", "b", "c", "d", "e"), (i, s) -> i + s
 #### onEach
 Same as Java `stream.peek` and Kotlin `sequence.onEach`.
 ```java
-Seq<Integer> newSeq = seq.onEach(System.out::println); // same as old but also println each element
+seq = seq.onEach(System.out::println); // same as old but also println each element
 ```
 #### onEachIndexed
 Same as Kotlin `sequence.onEachIndexed`.
 ```java
-Seq<Integer> newSeq = seq.onEachIndexed((index, i) -> System.out.println(index + " " + i)); // same as old but also println each element
+seq = seq.onEachIndexed((index, i) -> System.out.println(index + " " + i)); // same as old but also println each element
 ```
 #### onFirst
 ```java
-Seq<Integer> newSeq = seq.onFirst(System.out::println); // same as old but also (lazily) println the first element
+seq = seq.onFirst(System.out::println); // same as old but also (lazily) println the first element
 ```
 #### onLast
 ```java
-Seq<Integer> newSeq = seq.onLast(System.out::println); // same as old but also (lazily) println the last element
+seq = seq.onLast(System.out::println); // same as old but also (lazily) println the last element
 ```
-#### sort
-Same as Java `stream.sort` and Kotlin `sequence.sort`.
+#### sort & sortOn & sortBy & sortWith
+Same as Java `stream.sort` and Kotlin `sequence.sort` series.
 ```java
 Seq<Integer> s1 = seq.sort(); // 1, 1, 2, 3, 4
 Seq<Integer> s2 = seq.sortOn(Integer::compareTo); // 1, 1, 2, 3, 4
@@ -194,7 +195,7 @@ Same as Kotlin `sequence.fold` and a little like Java `stream.reduce`.
 Integer sum = seq.fold(0, (acc, i) -> acc + i); // sum by folding each element with initial 0
 ```
 #### feed
-Giving a destination then feed all elements to it. Works like `fold` but requires a `BiConsumer` rather than `BiFunction`.
+Giving a destination then feed all elements to it. Works like `fold` but requires a `BiConsumer` rather than `BiFunction`. This is the most frequently used method for terminal operations, and really useful for kinds of unexpected corner cases.
 ```java
 List<Integer> list = seq.feed(new ArrayList<>(), List::add); // collect to list
 ```
@@ -204,22 +205,22 @@ Same as Java `stream.collect(Collectors.toCollection(des))` and Kotlin `sequence
 List<Integer> list = seq.collect(new LinkedList<>());
 ```
 #### toList
-Same as Java `stream.collect(Collectors.toList())` and Kotlin `sequence.toList()`.
+Same as Java `stream.collect(Collectors.toList())` and Kotlin `sequence.toList()`, implemented by `collect`.
 ```java
 List<Integer> list = seq.toList();
 ```
 #### toSet
-Same as Java `stream.collect(Collectors.toSet())` and Kotlin `sequence.toSet()`.
+Same as Java `stream.collect(Collectors.toSet())` and Kotlin `sequence.toSet()`, implemented by `collect`.
 ```java
 Set<Integer> set = seq.toSet();
 ```
 #### toMap
-Same as Java `stream.collect(Collectors.toMap(...))` and Kotlin `sequence.toMap(...)`.
+Same as Java `stream.collect(Collectors.toMap(...))` and Kotlin `sequence.toMap(...)`, implemented by `feed`.
 ```java
 Map<Integer, String> map = seq.toMap(i -> i, i -> i.toString());
 ```
 #### toMapBy & toMapWith
-Same as Kotlin `sequence.toMapBy` (creating keys) and `sequence.toMapWith` (creating values).
+Same as Kotlin `sequence.toMapBy` (creating keys) and `sequence.toMapWith` (creating values), implemented by `feed`.
 ```java
 Map<String, Integer> newKeysMap = seq.toMapBy(i -> i.toString());
 Map<Integer, String> newValuesMap = seq.toMapWith(i -> i.toString());
@@ -232,7 +233,7 @@ Map<Integer, Set<Integer>> setMap = seq.groupBy(i -> i).toSet();
 Map<Integer, Map<Integer, String>> mapMap = seq.groupBy(i -> i).toMap(i -> i, i -> i.toString());
 ```
 #### join
-Same as Java `stream.collect(Collectors.joining(sep))` and Kotlin `sequence.joiningToString`.
+Same as Java `stream.collect(Collectors.joining(sep))` and Kotlin `sequence.joiningToString`, implemented by `feed`.
 ```java
 String s1 = seq.join(",");
 String s2 = seq.join(",", i -> "10" + i);
@@ -248,10 +249,11 @@ Same as Kotlin `sequence.last`.
 ```java
 Integer last = seq.last();
 ```
-#### any & all & none
-Same as Java `stream.anyMatch`, `stream.allMatch`, `stream.noneMatch` and Kotlin `sequence.any`, `sequence.all`, `sequence.none`. See also `anyNot`.
+#### any & anyNot & all & none
+Same as Java `stream.anyMatch`, `stream.allMatch`, `stream.noneMatch` and Kotlin `sequence.any`, `sequence.all`, `sequence.none`.
 ```java
 boolean anyOdd = seq.any(i -> i % 2 > 0);
+boolean anyEven = seq.anyNot(i -> i % 2 > 0);
 boolean allOdd = seq.all(i -> i % 2 > 0);
 boolean noneOdd = seq.none(i -> i % 2 > 0);
 ```
@@ -272,14 +274,14 @@ Integer min = seq.maxBy(i -> -i);
 Pair<Integer, Integer> minWithValue = seq.maxWith(i -> -i);
 ```
 #### cache
-Though `Seq` is always resuable unlike exhausting Java `Stream`, it might be high-cost sometimes (usually from IO). You can cache it for once then use it anywhere else.
+Though `Seq` is always resuable unlike disposable Java `Stream`, it might be high-cost sometimes (usually from IO). You can cache it for once then use it anywhere else.
 ```java
-Seq<Integer> cachedSeq = seq.cache();
+seq = seq.cache();
 ```
 #### parallel
 Same as Java `stream.parallel` to create a new parallelized `seq`, usually for multiple IO tasks.
 ```java
-ParallelSeq<Integer> parallelSeq = seq.parallel();
+seq = seq.parallel();
 ```
 
 ## Usage
