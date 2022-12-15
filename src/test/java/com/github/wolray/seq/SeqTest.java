@@ -114,6 +114,16 @@ public class SeqTest {
     }
 
     @Test
+    public void testSubLists() {
+        IntSeq seq = IntSeq.of("233(ab:c)114514(d:e:f:g)42");
+        seq
+            .map(i -> (char)i)
+            .subLists('(', ')')
+            .map(ls -> Seq.of(ls).join("", c -> Character.toString(c)))
+            .assertTo("(ab:c),(d:e:f:g)");
+    }
+
+    @Test
     public void testWhileEquals() {
         Seq<Integer> seq = Seq.of(1, 1, 2, 3, 4, 6);
         seq.takeWhileEquals().assertTo("1,1");
