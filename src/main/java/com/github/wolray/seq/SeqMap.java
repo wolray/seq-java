@@ -54,23 +54,19 @@ public class SeqMap<K, V> extends BackedSeq<Map.Entry<K, V>, Set<Map.Entry<K, V>
     }
 
     public <E> SeqMap<E, V> replaceKeys(BiFunction<K, V, E> function) {
-        return toMap(makeMap(sizeOrDefault(), map.getClass()),
-            e -> function.apply(e.getKey(), e.getValue()), Map.Entry::getValue);
+        return new SeqMap<>(toMap(e -> function.apply(e.getKey(), e.getValue()), Map.Entry::getValue).finish());
     }
 
     public <E> SeqMap<E, V> replaceKeys(Function<K, E> function) {
-        return toMap(makeMap(sizeOrDefault(), map.getClass()),
-            e -> function.apply(e.getKey()), Map.Entry::getValue);
+        return new SeqMap<>(toMap(e -> function.apply(e.getKey()), Map.Entry::getValue).finish());
     }
 
     public <E> SeqMap<K, E> replaceValues(BiFunction<K, V, E> function) {
-        return toMap(makeMap(sizeOrDefault(), map.getClass()),
-            Map.Entry::getKey, e -> function.apply(e.getKey(), e.getValue()));
+        return new SeqMap<>(toMap(Map.Entry::getKey, e -> function.apply(e.getKey(), e.getValue())).finish());
     }
 
     public <E> SeqMap<K, E> replaceValues(Function<V, E> function) {
-        return toMap(makeMap(sizeOrDefault(), map.getClass()),
-            Map.Entry::getKey, e -> function.apply(e.getValue()));
+        return new SeqMap<>(toMap(Map.Entry::getKey, e -> function.apply(e.getValue())).finish());
     }
 
     @Override

@@ -1,10 +1,7 @@
 package com.github.wolray.seq;
 
-import java.util.*;
-import java.util.function.BiConsumer;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
-import java.util.function.Supplier;
+import java.util.Map;
+import java.util.function.*;
 
 /**
  * @author wolray
@@ -29,112 +26,68 @@ public class Grouping<T, K> {
         return SeqMap.makeMap(10, mapClass);
     }
 
-    public <E> SeqMap<K, List<E>> toList(Function<T, E> function) {
-        return collect(ArrayList::new, function);
-    }
+//    public <C> SeqMap<K, C> then(BiFunction<K, SeqList<T>, C> mapper) {
+//        Supplier<Seq.Feeder<SeqList<T>, T>> toList = Seq::toList;
+//        toList()
+//        return eval(toList).replaceValues((k, v) -> mapper.apply(k, v.get()));
+//    }
 
-    public <E> SeqMap<K, Set<E>> toSet(Function<T, E> function) {
-        return collect(HashSet::new, function);
-    }
+//    public <C> SeqMap<K, C> then(Function<SeqList<T>, C> mapper) {
+//        Supplier<Seq.Feeder<SeqList<T>, T>> toList = Seq::toList;
+//        return eval(toList).replaceValues(v -> mapper.apply(v.get()));
+//    }
 
-    public <E, C extends Collection<E>> SeqMap<K, C> collect(Supplier<C> supplier, Function<T, E> function) {
-        return feed(supplier, (res, t) -> res.add(function.apply(t)));
-    }
-
-    public SeqMap<K, List<T>> toList() {
-        return collect(ArrayList::new);
-    }
-
-    public SeqMap<K, BatchList<>> toBatchList() {
-        return collect(BatchList::new);
-    }
-
-    public SeqMap<K, Set<T>> toSet() {
-        return collect(HashSet::new);
-    }
-
-    public <C extends Collection<T>> SeqMap<K, C> collect(Supplier<C> supplier) {
-        return feed(supplier, Collection::add);
-    }
-
-    public <E, V> SeqMap<K, Map<E, V>> toMap(Function<T, E> kFunction, Function<T, V> vFunction) {
-        return toMap(HashMap::new, kFunction, vFunction, null);
-    }
-
-    public <E, V> SeqMap<K, Map<E, V>> toMap(Function<T, E> kFunction, Function<T, V> vFunction, BinaryOperator<V> merging) {
-        return toMap(HashMap::new, kFunction, vFunction, merging);
-    }
-
-    public <E, V> SeqMap<K, Map<E, V>> toMap(Supplier<Map<E, V>> supplier, Function<T, E> kFunction, Function<T, V> vFunction) {
-        return toMap(supplier, kFunction, vFunction, null);
-    }
-
-    public <E, V> SeqMap<K, Map<E, V>> toMap(Supplier<Map<E, V>> supplier,
-        Function<T, E> kFunction, Function<T, V> vFunction,
-        BinaryOperator<V> merging) {
-        if (merging != null) {
-            return feed(supplier, (res, t) -> res.merge(kFunction.apply(t), vFunction.apply(t), merging));
-        } else {
-            return feed(supplier, (res, t) -> res.computeIfAbsent(kFunction.apply(t), k -> vFunction.apply(t)));
-        }
-    }
-
-    public <C> SeqMap<K, C> toSeqThen(BiFunction<K, Seq<T>, C> mapper) {
-        return collect(BatchList::new).replaceValues((k, v) -> mapper.apply(k, Seq.of(v)));
-    }
-
-    public <C> SeqMap<K, C> toSeqThen(Function<Seq<T>, C> mapper) {
-        return collect(BatchList::new).replaceValues(v -> mapper.apply(Seq.of(v)));
-    }
-
-    public <V> SeqMap<K, V> fold(Function<T, V> mapper, BinaryOperator<V> operator) {
-        Map<K, V> map = makeMap();
+    public <V> SeqMap<K, Supplier<V>> eval(Supplier<Seq.Feeder<V, T>> supplier) {
+        Map<K, Supplier<V>> map = makeMap();
         seq.eval(t -> {
             K k = function.apply(t);
-            map.merge(k, mapper.apply(t), operator);
+            Supplier<V> feeder = map.computeIfAbsent(k, it -> supplier.get());
+            ((Seq.Feeder<V, T>)feeder).accept(t);
         });
         return new SeqMap<>(map);
     }
 
-    public <C> SeqMap<K, C> feed(Supplier<C> supplier, BiConsumer<C, T> consumer) {
-        Map<K, C> map = makeMap();
+    @SuppressWarnings("unchecked")
+    public SeqMap<K, IntSupplier> evalInt(Supplier<Seq.IntFeeder<T>> supplier) {
+        Map<K, IntSupplier> map = makeMap();
         seq.eval(t -> {
             K k = function.apply(t);
-            C e = map.computeIfAbsent(k, it -> supplier.get());
-            consumer.accept(e, t);
+            IntSupplier feeder = map.computeIfAbsent(k, it -> supplier.get());
+            ((Seq.IntFeeder<T>)feeder).accept(t);
         });
         return new SeqMap<>(map);
     }
 
-    public SeqMap<K, Integer> count() {
-        return fold(t -> 1, Integer::sum);
+    @SuppressWarnings("unchecked")
+    public SeqMap<K, DoubleSupplier> evalDouble(Supplier<Seq.DoubleFeeder<T>> supplier) {
+        Map<K, DoubleSupplier> map = makeMap();
+        seq.eval(t -> {
+            K k = function.apply(t);
+            DoubleSupplier feeder = map.computeIfAbsent(k, it -> supplier.get());
+            ((Seq.DoubleFeeder<T>)feeder).accept(t);
+        });
+        return new SeqMap<>(map);
     }
 
-    public SeqMap<K, Double> sum(Function<T, Double> function) {
-        return fold(function, Double::sum);
+    @SuppressWarnings("unchecked")
+    public SeqMap<K, LongSupplier> evalLong(Supplier<Seq.LongFeeder<T>> supplier) {
+        Map<K, LongSupplier> map = makeMap();
+        seq.eval(t -> {
+            K k = function.apply(t);
+            LongSupplier feeder = map.computeIfAbsent(k, it -> supplier.get());
+            ((Seq.LongFeeder<T>)feeder).accept(t);
+        });
+        return new SeqMap<>(map);
     }
 
-    public SeqMap<K, Integer> sumInt(Function<T, Integer> function) {
-        return fold(function, Integer::sum);
-    }
-
-    public SeqMap<K, Long> sumLong(Function<T, Long> function) {
-        return fold(function, Long::sum);
-    }
-
-    public <E extends Comparable<E>> SeqMap<K, E> max(Function<T, E> function) {
-        return fold(function, (t1, t2) -> t1.compareTo(t2) > 0 ? t1 : t2);
-    }
-
-    public <E> SeqMap<K, E> max(Function<T, E> function, Comparator<E> comparator) {
-        return fold(function, (t1, t2) -> comparator.compare(t1, t2) > 0 ? t1 : t2);
-    }
-
-    public <E extends Comparable<E>> SeqMap<K, E> min(Function<T, E> function) {
-        return fold(function, (t1, t2) -> t1.compareTo(t2) < 0 ? t1 : t2);
-    }
-
-    public <E> SeqMap<K, E> min(Function<T, E> function, Comparator<E> comparator) {
-        return fold(function, (t1, t2) -> comparator.compare(t1, t2) < 0 ? t1 : t2);
+    @SuppressWarnings("unchecked")
+    public SeqMap<K, BooleanSupplier> evalBool(Supplier<Seq.BoolFeeder<T>> supplier) {
+        Map<K, BooleanSupplier> map = makeMap();
+        seq.eval(t -> {
+            K k = function.apply(t);
+            BooleanSupplier feeder = map.computeIfAbsent(k, it -> supplier.get());
+            ((Seq.BoolFeeder<T>)feeder).accept(t);
+        });
+        return new SeqMap<>(map);
     }
 }
