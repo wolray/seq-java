@@ -49,6 +49,14 @@ public interface IntSeq {
         };
     }
 
+    static IntSeq of(CharSequence cs) {
+        return c -> {
+            for (int i = 0; i < cs.length(); i++) {
+                c.accept(cs.charAt(i));
+            }
+        };
+    }
+
     static IntSeq gen(IntSupplier supplier) {
         return c -> {
             while (true) {

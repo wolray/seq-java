@@ -339,6 +339,25 @@ public interface Seq<T> {
         return c -> evalStateful(init, (m, t) -> c.accept(m.it = function.apply(m.it, t)));
     }
 
+    default Seq<SinglyList<T>> subLists(T first, T last) {
+        return subLists(first::equals, last::equals);
+    }
+
+    default Seq<SinglyList<T>> subLists(Predicate<T> first, Predicate<T> last) {
+        return c -> evalStateful((SinglyList<T>)null, (m, t) -> {
+            if (m.it == null && first.test(t)) {
+                m.it = new SinglyList<>();
+                m.it.add(t);
+            } else if (last.test(t)) {
+                m.it.add(t);
+                c.accept(m.it);
+                m.it = null;
+            } else if (m.it != null) {
+                m.it.add(t);
+            }
+        });
+    }
+
     @SuppressWarnings("unchecked")
     default Seq<T> append(T t, T... more) {
         return c -> {
