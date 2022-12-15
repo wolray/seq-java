@@ -4,8 +4,8 @@ package com.github.wolray.seq;
  * @author wolray
  */
 public class Pair<A, B> {
-    public final A first;
-    public final B second;
+    public A first;
+    public B second;
 
     public Pair(A first, B second) {
         this.first = first;

@@ -238,6 +238,38 @@ public interface Seq<T> {
         });
     }
 
+    default Seq<T> takeWhile(BiPredicate<T, T> testPrevCurr) {
+        return takeWhile(t -> t, testPrevCurr);
+    }
+
+    default <E> Seq<T> takeWhile(Function<T, E> function, BiPredicate<E, E> testPrevCurr) {
+        return c -> {
+            IntPair<E> m = new IntPair<>(0, null);
+            tillStop(t -> {
+                E e = function.apply(t);
+                if (m.first > 0) {
+                    if (testPrevCurr.test(m.second, e)) {
+                        c.accept(t);
+                    } else {
+                        stop();
+                    }
+                } else {
+                    c.accept(t);
+                    m.first = 1;
+                }
+                m.second = e;
+            });
+        };
+    }
+
+    default Seq<T> takeWhileEquals() {
+        return takeWhile(t -> t, Objects::equals);
+    }
+
+    default <E> Seq<T> takeWhileEquals(Function<T, E> function) {
+        return takeWhile(function, Objects::equals);
+    }
+
     default Seq<T> dropWhile(Predicate<T> predicate) {
         return c -> evalOnBool(false, (a, t) -> {
             if (a[0]) {
@@ -440,6 +472,18 @@ public interface Seq<T> {
         return evalStateful(null, (m, t) -> m.it = t);
     }
 
+    default T last(Predicate<T> predicate) {
+        return evalStateful(null, (m, t) -> {
+            if (predicate.test(t)) {
+                m.it = t;
+            }
+        });
+    }
+
+    default T lastNot(Predicate<T> predicate) {
+        return last(predicate.negate());
+    }
+
     default int count() {
         return evalIndexed((i, t) -> {});
     }
@@ -494,8 +538,8 @@ public interface Seq<T> {
         });
     }
 
-    default <V extends Comparable<V>> MutablePair<T, V> maxWith(Function<T, V> function) {
-        MutablePair<T, V> pair = new MutablePair<>(null, null);
+    default <V extends Comparable<V>> Pair<T, V> maxWith(Function<T, V> function) {
+        Pair<T, V> pair = new Pair<>(null, null);
         eval(t -> {
             V v = function.apply(t);
             if (pair.first == null || pair.second.compareTo(v) < 0) {
@@ -518,8 +562,8 @@ public interface Seq<T> {
         });
     }
 
-    default <V extends Comparable<V>> MutablePair<T, V> minWith(Function<T, V> function) {
-        MutablePair<T, V> pair = new MutablePair<>(null, null);
+    default <V extends Comparable<V>> Pair<T, V> minWith(Function<T, V> function) {
+        Pair<T, V> pair = new Pair<>(null, null);
         eval(t -> {
             V v = function.apply(t);
             if (pair.first == null || pair.second.compareTo(v) > 0) {

@@ -114,6 +114,14 @@ public class SeqTest {
     }
 
     @Test
+    public void testWhileEquals() {
+        Seq<Integer> seq = Seq.of(1, 1, 2, 3, 4, 6);
+        seq.takeWhileEquals().assertTo("1,1");
+        seq.takeWhileEquals(i -> i / 4).assertTo("1,1,2,3");
+        seq.drop(1).takeWhile((i, j) -> i + 1 == j).assertTo("1,2,3,4");
+    }
+
+    @Test
     public void testTree() {
         Node n0 = new Node(0);
         Node n1 = new Node(1);
