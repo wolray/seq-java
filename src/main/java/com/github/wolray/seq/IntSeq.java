@@ -253,6 +253,27 @@ public interface IntSeq {
         return evalOnInt(0, (a, t) -> a[0] += function.applyAsInt(t));
     }
 
+    default double average() {
+        return average(null);
+    }
+
+    default double average(IntToDoubleFunction weightFunction) {
+        double[] sumWithWeight = new double[2];
+        if (weightFunction != null) {
+            eval(t -> {
+                double w = weightFunction.applyAsDouble(t);
+                sumWithWeight[0] += t * w;
+                sumWithWeight[1] += w;
+            });
+        } else {
+            eval(t -> {
+                sumWithWeight[0] += t;
+                sumWithWeight[1] += 1;
+            });
+        }
+        return sumWithWeight[1] > 0 ? sumWithWeight[0] / sumWithWeight[1] : 0;
+    }
+
     interface IndexedIntConsumer {
         void accept(int i, int t);
     }
