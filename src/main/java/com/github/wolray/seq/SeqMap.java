@@ -1,6 +1,9 @@
 package com.github.wolray.seq;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 /**
  * @author wolray
@@ -25,6 +28,22 @@ public class SeqMap<K, V> extends BackedSeq<Map.Entry<K, V>, Set<Map.Entry<K, V>
         return new SeqMap<>(new TreeMap<>(comparator));
     }
 
+    static <K, V> Map<K, V> makeMap(int size, Class<?> mapClass) {
+        if (mapClass == null || HashMap.class.equals(mapClass)) {
+            return new HashMap<>(size);
+        }
+        if (LinkedHashMap.class.equals(mapClass)) {
+            return new LinkedHashMap<>(size);
+        }
+        if (TreeMap.class.equals(mapClass)) {
+            return new TreeMap<>();
+        }
+        if (ConcurrentHashMap.class.equals(mapClass)) {
+            return new ConcurrentHashMap<>(size);
+        }
+        return new HashMap<>(size);
+    }
+
     @Override
     public SeqSet<K> keySet() {
         return new SeqSet<>(map.keySet());
@@ -34,9 +53,29 @@ public class SeqMap<K, V> extends BackedSeq<Map.Entry<K, V>, Set<Map.Entry<K, V>
         return map.values()::forEach;
     }
 
+    public <E> SeqMap<E, V> replaceKeys(BiFunction<K, V, E> function) {
+        return toMap(makeMap(sizeOrDefault(), map.getClass()),
+            e -> function.apply(e.getKey(), e.getValue()), Map.Entry::getValue);
+    }
+
+    public <E> SeqMap<E, V> replaceKeys(Function<K, E> function) {
+        return toMap(makeMap(sizeOrDefault(), map.getClass()),
+            e -> function.apply(e.getKey()), Map.Entry::getValue);
+    }
+
+    public <E> SeqMap<K, E> replaceValues(BiFunction<K, V, E> function) {
+        return toMap(makeMap(sizeOrDefault(), map.getClass()),
+            Map.Entry::getKey, e -> function.apply(e.getKey(), e.getValue()));
+    }
+
+    public <E> SeqMap<K, E> replaceValues(Function<V, E> function) {
+        return toMap(makeMap(sizeOrDefault(), map.getClass()),
+            Map.Entry::getKey, e -> function.apply(e.getValue()));
+    }
+
     @Override
     public String toString() {
-        return backer.toString();
+        return map.toString();
     }
 
     @Override

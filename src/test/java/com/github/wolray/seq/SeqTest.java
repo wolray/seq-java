@@ -2,8 +2,10 @@ package com.github.wolray.seq;
 
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 
 /**
@@ -118,7 +120,7 @@ public class SeqTest {
         IntSeq seq = IntSeq.of("233(ab:c)114514(d:e:f:g)42");
         seq
             .map(i -> (char)i)
-            .subLists('(', ')')
+            .subCollect(ArrayList::new, '(', ')')
             .map(ls -> Seq.of(ls).join("", c -> Character.toString(c)))
             .assertTo("(ab:c),(d:e:f:g)");
     }
@@ -146,6 +148,24 @@ public class SeqTest {
         n2.left = n5;
         Seq<Node> seq = Seq.ofTree(n0, n -> Seq.of(n.left, n.right));
         seq.map(n -> n.value).assertTo("0,1,3,4,2,5");
+    }
+
+    @Test
+    public void testSubCollect() {
+        Map<String, Integer> map = Seq.of(
+                new Triple<>("john", 2015, "success"),
+                new Triple<>("john", 2013, "fail"),
+                new Triple<>("chris", 2013, "success"),
+                new Triple<>("john", 2012, "fail"),
+                new Triple<>("john", 2009, "success"),
+                new Triple<>("chris", 2007, "fail"),
+                new Triple<>("john", 2005, "fail"))
+            .groupBy(r -> r.first)
+            .toSeqThen(s -> s
+                .sortBy(r -> r.second)
+                .subCollect(ArrayList::new, "fail", "success", t -> t.third)
+                .sumInt(ls -> ls.get(ls.size() - 1).second - ls.get(0).second));
+        System.out.println(map);
     }
 
     static class Node {

@@ -339,14 +339,18 @@ public interface Seq<T> {
         return c -> evalStateful(init, (m, t) -> c.accept(m.it = function.apply(m.it, t)));
     }
 
-    default Seq<SinglyList<T>> subLists(T first, T last) {
-        return subLists(first::equals, last::equals);
+    default <C extends Collection<T>> Seq<C> subCollect(Supplier<C> des, T first, T last) {
+        return subCollect(des, first::equals, last::equals);
     }
 
-    default Seq<SinglyList<T>> subLists(Predicate<T> first, Predicate<T> last) {
-        return c -> evalStateful((SinglyList<T>)null, (m, t) -> {
+    default <C extends Collection<T>, E> Seq<C> subCollect(Supplier<C> des, E first, E last, Function<T, E> function) {
+        return subCollect(des, t -> first.equals(function.apply(t)), t -> last.equals(function.apply(t)));
+    }
+
+    default <C extends Collection<T>> Seq<C> subCollect(Supplier<C> des, Predicate<T> first, Predicate<T> last) {
+        return c -> evalStateful((C)null, (m, t) -> {
             if (m.it == null && first.test(t)) {
-                m.it = new SinglyList<>();
+                m.it = des.get();
                 m.it.add(t);
             } else if (last.test(t)) {
                 m.it.add(t);

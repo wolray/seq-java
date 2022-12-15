@@ -1,7 +1,6 @@
 package com.github.wolray.seq;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
@@ -27,19 +26,7 @@ public class Grouping<T, K> {
     }
 
     private <E> Map<K, E> makeMap() {
-        if (mapClass == null || HashMap.class.equals(mapClass)) {
-            return new HashMap<>();
-        }
-        if (LinkedHashMap.class.equals(mapClass)) {
-            return new LinkedHashMap<>();
-        }
-        if (TreeMap.class.equals(mapClass)) {
-            return new TreeMap<>();
-        }
-        if (ConcurrentHashMap.class.equals(mapClass)) {
-            return new ConcurrentHashMap<>();
-        }
-        return new HashMap<>();
+        return SeqMap.makeMap(10, mapClass);
     }
 
     public <E> SeqMap<K, List<E>> toList(Function<T, E> function) {
@@ -56,6 +43,10 @@ public class Grouping<T, K> {
 
     public SeqMap<K, List<T>> toList() {
         return collect(ArrayList::new);
+    }
+
+    public SeqMap<K, BatchList<>> toBatchList() {
+        return collect(BatchList::new);
     }
 
     public SeqMap<K, Set<T>> toSet() {
@@ -88,14 +79,12 @@ public class Grouping<T, K> {
         }
     }
 
-    public <C> SeqMap<K, C> feed(Supplier<C> supplier, BiConsumer<C, T> consumer) {
-        Map<K, C> map = makeMap();
-        seq.eval(t -> {
-            K k = function.apply(t);
-            C e = map.computeIfAbsent(k, it -> supplier.get());
-            consumer.accept(e, t);
-        });
-        return new SeqMap<>(map);
+    public <C> SeqMap<K, C> toSeqThen(BiFunction<K, Seq<T>, C> mapper) {
+        return collect(BatchList::new).replaceValues((k, v) -> mapper.apply(k, Seq.of(v)));
+    }
+
+    public <C> SeqMap<K, C> toSeqThen(Function<Seq<T>, C> mapper) {
+        return collect(BatchList::new).replaceValues(v -> mapper.apply(Seq.of(v)));
     }
 
     public <V> SeqMap<K, V> fold(Function<T, V> mapper, BinaryOperator<V> operator) {
@@ -103,6 +92,16 @@ public class Grouping<T, K> {
         seq.eval(t -> {
             K k = function.apply(t);
             map.merge(k, mapper.apply(t), operator);
+        });
+        return new SeqMap<>(map);
+    }
+
+    public <C> SeqMap<K, C> feed(Supplier<C> supplier, BiConsumer<C, T> consumer) {
+        Map<K, C> map = makeMap();
+        seq.eval(t -> {
+            K k = function.apply(t);
+            C e = map.computeIfAbsent(k, it -> supplier.get());
+            consumer.accept(e, t);
         });
         return new SeqMap<>(map);
     }
