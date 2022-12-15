@@ -231,10 +231,14 @@ public interface Seq<T> {
     }
 
     default Seq<T> onLast(Consumer<T> consumer) {
-        return c -> consumer.accept(fold((T)null, (m, t) -> {
-            c.accept(t);
-            return t;
-        }).finish());
+        return c -> {
+            Feeder<T, T> feeder = fold(null, (m, t) -> {
+                c.accept(t);
+                return t;
+            });
+            eval(feeder);
+            consumer.accept(feeder.get());
+        };
     }
 
     default Seq<T> filter(Predicate<T> predicate) {
@@ -382,14 +386,16 @@ public interface Seq<T> {
 
     default Seq<SeqList<T>> chunked(int size) {
         return c -> {
-            SeqList<T> last = fold(new SeqList<T>(new ArrayList<>(size)), (ls, t) -> {
+            Feeder<SeqList<T>, T> feeder = fold(new SeqList<>(new ArrayList<>(size)), (ls, t) -> {
                 if (ls.size() >= size) {
                     c.accept(ls);
                     ls = new SeqList<>(new ArrayList<>(size));
                 }
                 ls.add(t);
                 return ls;
-            }).finish();
+            });
+            eval(feeder);
+            SeqList<T> last = feeder.get();
             if (last.isNotEmpty()) {
                 c.accept(last);
             }
@@ -408,18 +414,18 @@ public interface Seq<T> {
         }));
     }
 
-    default <E> Seq<E> mapSub(T first, T last, Supplier<Feeder<E, T>> feeder) {
-        return mapSub(first::equals, last::equals, feeder);
+    default <E> Seq<E> mapSub(T first, T last, FeederFunction<T, E> function) {
+        return mapSub(first::equals, last::equals, function);
     }
 
-    default <E, V> Seq<E> mapSub(V first, V last, Function<T, V> function, Supplier<Feeder<E, T>> feeder) {
-        return mapSub(t -> first.equals(function.apply(t)), t -> last.equals(function.apply(t)), feeder);
+    default <E, V> Seq<E> mapSub(V first, V last, Function<T, V> function, FeederFunction<T, E> feederFunction) {
+        return mapSub(t -> first.equals(function.apply(t)), t -> last.equals(function.apply(t)), feederFunction);
     }
 
-    default <E> Seq<E> mapSub(Predicate<T> first, Predicate<T> last, Supplier<Feeder<E, T>> feeder) {
+    default <E> Seq<E> mapSub(Predicate<T> first, Predicate<T> last, FeederFunction<T, E> feederFunction) {
         return c -> eval(fold((Feeder<E, T>)null, (f, t) -> {
             if (f == null && first.test(t)) {
-                f = feeder.get();
+                f = feederFunction.toFeeder();
                 f.accept(t);
             } else if (f != null) {
                 f.accept(t);
@@ -458,7 +464,10 @@ public interface Seq<T> {
     }
 
     default Seq<List<T>> permute(boolean inplace) {
-        return c -> SeqUtil.permute(c, toArrayList().finish(), 0, inplace);
+        return c -> {
+            Feeder<ArrayList<T>, T> feeder = toArrayList();
+            SeqUtil.permute(c, feeder.eval(), 0, inplace);
+        };
     }
 
     default <E> Seq<Pair<T, E>> zip(Iterable<E> iterable) {
@@ -738,7 +747,7 @@ public interface Seq<T> {
     }
 
     default SeqList<T> sortOn(Comparator<T> comparator) {
-        SeqList<T> list = toList().finish();
+        SeqList<T> list = toList().eval();
         list.backer.sort(comparator);
         return list;
     }
@@ -769,7 +778,7 @@ public interface Seq<T> {
 
     @SuppressWarnings("unchecked")
     default <E> E[] toArrayTo(IntFunction<E[]> generator) {
-        List<T> list = toBatchList().finish();
+        List<T> list = toBatchList().eval();
         E[] res = generator.apply(list.size());
         int i = 0;
         for (T t : list) {
@@ -839,7 +848,7 @@ public interface Seq<T> {
     }
 
     default Seq<T> cache() {
-        return of(toBatchList().finish());
+        return of(toBatchList().eval());
     }
 
     default <K> Grouping<T, K> groupBy(Function<T, K> kFunction) {
@@ -884,7 +893,7 @@ public interface Seq<T> {
     }
 
     default void assertTo(String sep, String s) {
-        assert join(sep).finish().equals(s);
+        assert join(sep).eval().equals(s);
     }
 
     default void printAll() {
@@ -895,7 +904,7 @@ public interface Seq<T> {
         if ("\n".equals(sep)) {
             eval(System.out::println);
         } else {
-            System.out.println(join(sep).finish());
+            System.out.println(join(sep).eval());
         }
     }
 
@@ -922,7 +931,7 @@ public interface Seq<T> {
             this.seq = seq;
         }
 
-        public E finish() {
+        public E eval() {
             seq.tillStop(this);
             return get();
         }
@@ -949,7 +958,7 @@ public interface Seq<T> {
             this.seq = seq;
         }
 
-        public int finish() {
+        public int eval() {
             seq.tillStop(this);
             return getAsInt();
         }
@@ -976,7 +985,7 @@ public interface Seq<T> {
             this.seq = seq;
         }
 
-        public double finish() {
+        public double eval() {
             seq.tillStop(this);
             return getAsDouble();
         }
@@ -1003,7 +1012,7 @@ public interface Seq<T> {
             this.seq = seq;
         }
 
-        public long finish() {
+        public long eval() {
             seq.tillStop(this);
             return getAsLong();
         }
@@ -1030,7 +1039,7 @@ public interface Seq<T> {
             this.seq = seq;
         }
 
-        public boolean finish() {
+        public boolean eval() {
             seq.tillStop(this);
             return getAsBoolean();
         }
@@ -1052,6 +1061,36 @@ public interface Seq<T> {
 
     static <E> E stop() throws StopException {
         throw StopException.INSTANCE;
+    }
+
+    interface FeederFunction<T, E> extends Function<Seq<T>, Feeder<E, T>> {
+        default Feeder<E, T> toFeeder() {
+            return apply(Seq.empty());
+        }
+    }
+
+    interface IntFeederFunction<T> extends Function<Seq<T>, IntFeeder<T>> {
+        default IntFeeder<T> toFeeder() {
+            return apply(Seq.empty());
+        }
+    }
+
+    interface DoubleFeederFunction<T> extends Function<Seq<T>, DoubleFeeder<T>> {
+        default DoubleFeeder<T> toFeeder() {
+            return apply(Seq.empty());
+        }
+    }
+
+    interface LongFeederFunction<T> extends Function<Seq<T>, LongFeeder<T>> {
+        default LongFeeder<T> toFeeder() {
+            return apply(Seq.empty());
+        }
+    }
+
+    interface BoolFeederFunction<T> extends Function<Seq<T>, BoolFeeder<T>> {
+        default BoolFeeder<T> toFeeder() {
+            return apply(Seq.empty());
+        }
     }
 
     interface IndexedConsumer<T> {

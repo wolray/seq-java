@@ -4,6 +4,8 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.function.IntSupplier;
 import java.util.function.Predicate;
 
 /**
@@ -37,16 +39,16 @@ public class SeqTest {
     @Test
     public void testRunningFold() {
         Seq<Integer> seq = Seq.of(0, 2, 4, 1, 6, 3, 5, 7, 10, 11, 12);
-        seq.runningFold(0, Integer::sum).printAll();
+        seq.runningFold(0, Integer::sum).assertTo("0,2,6,7,13,16,21,28,38,49,61");
     }
 
     @Test
     public void testChunked() {
         List<Integer> list = Arrays.asList(0, 2, 4, 1, 6, 3, 5, 7, 10, 11, 12);
-        Seq.of(list).chunked(2).map(s -> s.join(",").finish()).assertTo("|", "0,2|4,1|6,3|5,7|10,11|12");
-        Seq.of(list).chunked(3).map(s -> s.join(",").finish()).assertTo("|", "0,2,4|1,6,3|5,7,10|11,12");
-        Seq.of(list).chunked(4).map(s -> s.join(",").finish()).assertTo("|", "0,2,4,1|6,3,5,7|10,11,12");
-        Seq.of(list).chunked(5).map(s -> s.join(",").finish()).assertTo("|", "0,2,4,1,6|3,5,7,10,11|12");
+        Seq.of(list).chunked(2).map(s -> s.join(",").eval()).assertTo("|", "0,2|4,1|6,3|5,7|10,11|12");
+        Seq.of(list).chunked(3).map(s -> s.join(",").eval()).assertTo("|", "0,2,4|1,6,3|5,7,10|11,12");
+        Seq.of(list).chunked(4).map(s -> s.join(",").eval()).assertTo("|", "0,2,4,1|6,3,5,7|10,11,12");
+        Seq.of(list).chunked(5).map(s -> s.join(",").eval()).assertTo("|", "0,2,4,1,6|3,5,7,10,11|12");
     }
 
     @Test
@@ -115,11 +117,9 @@ public class SeqTest {
 
     @Test
     public void testSubLists() {
-        Seq<Character> empty = Seq.empty();
-        Seq.Feeder<String, Character> join = empty.join("");
         IntSeq.of("233(ab:c)114514(d:e:f:g)42")
             .map(i -> (char)i)
-            .mapSub('(', ')', () -> join)
+            .mapSub('(', ')', s -> s.join(""))
             .printAll();
     }
 
@@ -150,24 +150,18 @@ public class SeqTest {
 
     @Test
     public void testSubCollect() {
-//        Map<String, Integer> map = Seq.of(
-//                new Triple<>("john", 2015, "success"),
-//                new Triple<>("john", 2013, "fail"),
-//                new Triple<>("chris", 2013, "success"),
-//                new Triple<>("john", 2012, "fail"),
-//                new Triple<>("john", 2009, "success"),
-//                new Triple<>("chris", 2007, "fail"),
-//                new Triple<>("john", 2005, "fail"))
-//            .groupBy(r -> r.first)
-//            .then(s -> {
-//                s.sort(Comparator.comparing(r -> r.second));
-//                Seq.Feeder<SeqList<Triple<String, Integer, String>>, Triple<String, Integer, String>> f0 = Seq.toList();
-//                Seq.Feeder<Integer, Triple<String, Integer, String>> tripleFeeder = f0.map(ls -> ls.get(ls.size() - 1).second - ls.get(0).second);
-////                Seq.Feeder<Integer, Triple<String, Integer, String>> tripleFeeder2 = Seq.toList().map(ls -> ls.get(ls.size() - 1).second - ls.get(0).second);
-//                Seq<Integer> seq = s.mapSub("fail", "success", t -> t.third, () -> tripleFeeder);
-//                return seq.eval(Seq.sumInt(i -> i));
-//            });
-//        System.out.println(map);
+        Map<String, Integer> map = Seq.of(
+                new Triple<>("john", 2015, "success"),
+                new Triple<>("john", 2013, "fail"),
+                new Triple<>("chris", 2013, "success"),
+                new Triple<>("john", 2012, "fail"),
+                new Triple<>("john", 2009, "success"),
+                new Triple<>("chris", 2007, "fail"),
+                new Triple<>("john", 2005, "fail"))
+            .groupBy(r -> r.first)
+            .toInt(Seq::count)
+            .replaceValues(IntSupplier::getAsInt);
+        System.out.println(map);
     }
 
     static class Node {
