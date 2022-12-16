@@ -3,11 +3,12 @@ package com.github.wolray.seq;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.function.Consumer;
 
 /**
  * @author wolray
  */
-public abstract class PickItr<T> implements Iterator<T> {
+public abstract class PickItr<T> implements Seq<T>, Iterator<T> {
     private T next;
     private State state = State.Unset;
 
@@ -31,12 +32,17 @@ public abstract class PickItr<T> implements Iterator<T> {
     public abstract T pick();
 
     @Override
+    public void eval(Consumer<T> consumer) {
+        forEachRemaining(consumer);
+    }
+
+    @Override
     public boolean hasNext() {
         if (state == State.Unset) {
             try {
                 next = pick();
                 state = State.Cached;
-            } catch (Foldable.StopException e) {
+            } catch (BaseFoldable.StopException e) {
                 state = State.Done;
             }
         }

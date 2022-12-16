@@ -4,18 +4,9 @@ import java.util.*;
 import java.util.function.*;
 
 /**
- * @author yilai
- * @since 2022/12/16
+ * @author wolray
  */
-public interface Foldable<T> {
-    void eval(Consumer<T> t);
-
-    default void tillStop(Consumer<T> consumer) {
-        try {
-            eval(consumer);
-        } catch (Seq.StopException ignore) {}
-    }
-
+public interface Foldable<T> extends Foldable0<Consumer<T>> {
     default <E> Folder<E, T> feed(E des, BiConsumer<E, T> consumer) {
         return new Folder<E, T>(this) {
             @Override
@@ -335,9 +326,8 @@ public interface Foldable<T> {
     }
 
     default Folder<Pair<BatchList<T>, BatchList<T>>, T> partition(Predicate<T> predicate) {
-        return feed(new Pair<>(new BatchList<>(), new BatchList<>()), (p, t) -> {
-            (predicate.test(t) ? p.first : p.second).add(t);
-        });
+        return feed(new Pair<>(new BatchList<>(), new BatchList<>()), (p, t) ->
+            (predicate.test(t) ? p.first : p.second).add(t));
     }
 
     default <K, V> Folder<Map<K, V>, T> toMap(Function<T, K> kFunction, Function<T, V> vFunction) {
@@ -403,19 +393,6 @@ public interface Foldable<T> {
         default Folder<E, T> gen() {
             return apply(Seq.empty());
         }
-    }
-
-    class StopException extends RuntimeException {
-        static final StopException INSTANCE = new StopException() {
-            @Override
-            public synchronized Throwable fillInStackTrace() {
-                return this;
-            }
-        };
-    }
-
-    static <E> E stop() throws StopException {
-        throw StopException.INSTANCE;
     }
 
     interface IndexObjConsumer<T> {

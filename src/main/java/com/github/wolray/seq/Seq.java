@@ -154,7 +154,7 @@ public interface Seq<T> extends Foldable<T> {
             if (i < n) {
                 c.accept(t);
             } else {
-                Foldable.stop();
+                stop();
             }
         }));
     }
@@ -176,7 +176,7 @@ public interface Seq<T> extends Foldable<T> {
             if (predicate.test(t)) {
                 c.accept(t);
             } else {
-                Foldable.stop();
+                stop();
             }
         });
     }
@@ -194,7 +194,7 @@ public interface Seq<T> extends Foldable<T> {
                     if (testPrevCurr.test(m.second, e)) {
                         c.accept(t);
                     } else {
-                        Foldable.stop();
+                        stop();
                     }
                 } else {
                     c.accept(t);
@@ -354,7 +354,7 @@ public interface Seq<T> extends Foldable<T> {
                 if (iterator.hasNext()) {
                     c.accept(function.apply(t, iterator.next()));
                 } else {
-                    Foldable.stop();
+                    stop();
                 }
             });
         };
@@ -368,7 +368,7 @@ public interface Seq<T> extends Foldable<T> {
                 if (bi.hasNext() && ci.hasNext()) {
                     c.accept(new Triple<>(t, bi.next(), ci.next()));
                 } else {
-                    Foldable.stop();
+                    stop();
                 }
             });
         };
@@ -380,7 +380,7 @@ public interface Seq<T> extends Foldable<T> {
             if (ei.hasNext()) {
                 consumer.accept(t, ei.next());
             } else {
-                Foldable.stop();
+                stop();
             }
         });
     }

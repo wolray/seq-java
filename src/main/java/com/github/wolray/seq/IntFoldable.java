@@ -5,15 +5,7 @@ import java.util.function.*;
 /**
  * @author wolray
  */
-public interface IntFoldable {
-    void eval(IntConsumer consumer);
-
-    default void tillStop(IntConsumer consumer) {
-        try {
-            eval(consumer);
-        } catch (Seq.StopException ignore) {}
-    }
-
+public interface IntFoldable extends Foldable0<IntConsumer> {
     default <E> IntFolder<E> find(E ifNotFound, IntPredicate predicate, IntFunction<E> function) {
         return new IntFolder<E>(this) {
             E e = ifNotFound;
@@ -27,7 +19,7 @@ public interface IntFoldable {
             public void accept(int t) {
                 if (predicate.test(t)) {
                     e = function.apply(t);
-                    Foldable.stop();
+                    stop();
                 }
             }
         };

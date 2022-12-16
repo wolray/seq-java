@@ -120,7 +120,7 @@ public interface IntSeq extends IntFoldable {
             if (i < n) {
                 c.accept(t);
             } else {
-                Foldable.stop();
+                stop();
             }
         }));
     }
@@ -142,7 +142,7 @@ public interface IntSeq extends IntFoldable {
             if (predicate.test(t)) {
                 c.accept(t);
             } else {
-                Foldable.stop();
+                stop();
             }
         });
     }
