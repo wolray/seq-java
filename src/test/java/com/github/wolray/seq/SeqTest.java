@@ -14,15 +14,21 @@ import java.util.function.Supplier;
 public class SeqTest {
     @Test
     public void testResult() {
-        Seq<Integer> seq = Seq.of(0, 2, 4, 1, 6, 3, 5, 7, 10, 11, 12);
-        Seq<Integer> filtered = seq.take(5);
-        filtered.assertTo("0,2,4,1,6");
-        filtered.assertTo("0,2,4,1,6");
+        Seq<Integer> seq1 = Seq.of(0, 2, 4, 1, 6, 3, 5, 7, 10, 11, 12);
+        Seq<Integer> filtered1 = seq1.take(5);
+        filtered1.assertTo("0,2,4,1,6");
+        filtered1.assertTo("0,2,4,1,6");
+
+        IntSeq seq2 = IntSeq.of(0, 2, 4, 1, 6, 3, 5, 7, 10, 11, 12);
+        IntSeq filtered2 = seq2.take(5);
+        filtered2.boxed().assertTo("0,2,4,1,6");
+        filtered2.boxed().assertTo("0,2,4,1,6");
+
         Predicate<Integer> predicate = i -> (i & 1) == 0;
-        seq.dropWhile(predicate).assertTo("1,6,3,5,7,10,11,12");
-        seq.takeWhile(predicate).assertTo("0,2,4");
-        seq.take(5).assertTo("0,2,4,1,6");
-        seq.take(5).drop(2).assertTo("4,1,6");
+        seq1.dropWhile(predicate).assertTo("1,6,3,5,7,10,11,12");
+        seq1.takeWhile(predicate).assertTo("0,2,4");
+        seq1.take(5).assertTo("0,2,4,1,6");
+        seq1.take(5).drop(2).assertTo("4,1,6");
 
         Seq<Integer> token1 = Seq.tillNull(() -> 1).take(5);
         token1.assertTo("1,1,1,1,1");
@@ -40,6 +46,9 @@ public class SeqTest {
     public void testRunningFold() {
         Seq<Integer> seq = Seq.of(0, 2, 4, 1, 6, 3, 5, 7, 10, 11, 12);
         seq.runningFold(0, Integer::sum).assertTo("0,2,6,7,13,16,21,28,38,49,61");
+
+        IntSeq is = IntSeq.of(0, 2, 4, 1, 6, 3, 5, 7, 10, 11, 12);
+        is.runningFold(0, Integer::sum).boxed().assertTo("0,2,6,7,13,16,21,28,38,49,61");
     }
 
     @Test
@@ -119,7 +128,7 @@ public class SeqTest {
     public void testSubLists() {
         IntSeq.of("233(ab:c)114514(d:e:f:g)42")
             .mapToObj(i -> (char)i)
-            .mapSub('(', ')', s -> s.join(""))
+            .mapSub('(', ')', f -> f.join(""))
             .printAll();
     }
 
@@ -158,7 +167,7 @@ public class SeqTest {
                 new Triple<>("john", 2009, "success"),
                 new Triple<>("chris", 2007, "fail"),
                 new Triple<>("john", 2005, "fail"))
-            .groupBy(r -> r.first, HashMap.class, Seq::count)
+            .groupBy(r -> r.first, HashMap.class, Foldable::count)
             .mapValue(Supplier::get);
         System.out.println(map);
     }
