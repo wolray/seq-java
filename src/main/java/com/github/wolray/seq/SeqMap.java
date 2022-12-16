@@ -28,20 +28,20 @@ public class SeqMap<K, V> extends BackedSeq<Map.Entry<K, V>, Set<Map.Entry<K, V>
         return new SeqMap<>(new TreeMap<>(comparator));
     }
 
-    public static <K, V> Map<K, V> makeMap(int size, Class<?> mapClass) {
-        if (mapClass == null || HashMap.class.equals(mapClass)) {
-            return new HashMap<>(size);
+    public static <K, V> Map<K, V> newMap(Map<?, ?> map) {
+        if (map instanceof LinkedHashMap) {
+            return new LinkedHashMap<>(map.size());
         }
-        if (LinkedHashMap.class.equals(mapClass)) {
-            return new LinkedHashMap<>(size);
+        if (map instanceof HashMap) {
+            return new HashMap<>(map.size());
         }
-        if (TreeMap.class.equals(mapClass)) {
+        if (map instanceof TreeMap) {
             return new TreeMap<>();
         }
-        if (ConcurrentHashMap.class.equals(mapClass)) {
-            return new ConcurrentHashMap<>(size);
+        if (map instanceof ConcurrentHashMap) {
+            return new ConcurrentHashMap<>(map.size());
         }
-        return new HashMap<>(size);
+        return new HashMap<>(map.size());
     }
 
     @Override
@@ -54,19 +54,19 @@ public class SeqMap<K, V> extends BackedSeq<Map.Entry<K, V>, Set<Map.Entry<K, V>
     }
 
     public <E> SeqMap<E, V> mapKey(BiFunction<K, V, E> function) {
-        return new SeqMap<>(toMap(e -> function.apply(e.getKey(), e.getValue()), Map.Entry::getValue).eval());
+        return new SeqMap<>(toMap(newMap(map), e -> function.apply(e.getKey(), e.getValue()), Map.Entry::getValue).eval());
     }
 
     public <E> SeqMap<E, V> mapKey(Function<K, E> function) {
-        return new SeqMap<>(toMap(e -> function.apply(e.getKey()), Map.Entry::getValue).eval());
+        return new SeqMap<>(toMap(newMap(map), e -> function.apply(e.getKey()), Map.Entry::getValue).eval());
     }
 
     public <E> SeqMap<K, E> mapValue(BiFunction<K, V, E> function) {
-        return new SeqMap<>(toMap(Map.Entry::getKey, e -> function.apply(e.getKey(), e.getValue())).eval());
+        return new SeqMap<>(toMap(newMap(map), Map.Entry::getKey, e -> function.apply(e.getKey(), e.getValue())).eval());
     }
 
     public <E> SeqMap<K, E> mapValue(Function<V, E> function) {
-        return new SeqMap<>(toMap(Map.Entry::getKey, e -> function.apply(e.getValue())).eval());
+        return new SeqMap<>(toMap(newMap(map), Map.Entry::getKey, e -> function.apply(e.getValue())).eval());
     }
 
     @Override
@@ -76,12 +76,12 @@ public class SeqMap<K, V> extends BackedSeq<Map.Entry<K, V>, Set<Map.Entry<K, V>
 
     @Override
     public int size() {
-        return backer.size();
+        return map.size();
     }
 
     @Override
     public boolean isEmpty() {
-        return backer.isEmpty();
+        return map.isEmpty();
     }
 
     @Override

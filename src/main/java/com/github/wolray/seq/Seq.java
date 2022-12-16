@@ -262,16 +262,14 @@ public interface Seq<T> extends Foldable<T> {
 
     default Seq<SeqList<T>> chunked(int size) {
         return c -> {
-            Folder<SeqList<T>, T> folder = fold(new SeqList<>(new ArrayList<>(size)), (ls, t) -> {
+            SeqList<T> last = fold(new SeqList<>(new ArrayList<T>(size)), (ls, t) -> {
                 if (ls.size() >= size) {
                     c.accept(ls);
                     ls = new SeqList<>(new ArrayList<>(size));
                 }
                 ls.add(t);
                 return ls;
-            });
-            eval(folder);
-            SeqList<T> last = folder.get();
+            }).eval();
             if (last.isNotEmpty()) {
                 c.accept(last);
             }
@@ -441,27 +439,23 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default <K, V> SeqMap<K, Supplier<V>> groupBy(Function<T, K> kFunction, ToFolder<T, V> toFolder) {
-        return groupBy(kFunction, null, 10, toFolder);
+        return groupBy(new HashMap<>(), kFunction, toFolder);
     }
 
-    default <K, V> SeqMap<K, Supplier<V>> groupBy(Function<T, K> kFunction, int groupSize, ToFolder<T, V> toFolder) {
-        return groupBy(kFunction, null, groupSize, toFolder);
-    }
-
-    @SuppressWarnings("rawtypes")
-    default <K, V> SeqMap<K, Supplier<V>> groupBy(Function<T, K> kFunction, Class<? extends Map> mapClass, ToFolder<T, V> toFolder) {
-        return groupBy(kFunction, mapClass, 10, toFolder);
-    }
-
-    @SuppressWarnings("rawtypes")
-    default <K, V> SeqMap<K, Supplier<V>> groupBy(Function<T, K> kFunction, Class<? extends Map> mapClass, int groupSize, ToFolder<T, V> toFolder) {
-        Map<K, Supplier<V>> map = SeqMap.makeMap(groupSize, mapClass);
+    default <K, V> SeqMap<K, Supplier<V>> groupBy(Map<K, Supplier<V>> des, Function<T, K> kFunction, ToFolder<T, V> toFolder) {
         eval(t -> {
             K k = kFunction.apply(t);
-            Supplier<V> folder = map.computeIfAbsent(k, it -> toFolder.gen());
+            Supplier<V> folder = des.computeIfAbsent(k, it -> toFolder.gen());
             ((Folder<V, T>)folder).accept(t);
         });
-        return new SeqMap<>(map);
+        return new SeqMap<>(des);
+    }
+
+    default ParallelSeq<T> parallel() {
+        return this instanceof ParallelSeq ? (ParallelSeq<T>)this : c -> {
+            ForkJoinPool pool = new ForkJoinPool();
+            eval(t -> pool.submit(() -> c.accept(t)));
+        };
     }
 
     default void assertTo(String s) {
@@ -482,13 +476,6 @@ public interface Seq<T> extends Foldable<T> {
         } else {
             System.out.println(join(sep).eval());
         }
-    }
-
-    default ParallelSeq<T> parallel() {
-        return this instanceof ParallelSeq ? (ParallelSeq<T>)this : c -> {
-            ForkJoinPool pool = new ForkJoinPool();
-            eval(t -> pool.submit(() -> c.accept(t)));
-        };
     }
 
     class Empty {
