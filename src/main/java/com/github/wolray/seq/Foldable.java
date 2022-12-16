@@ -252,20 +252,13 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
     }
 
     @SuppressWarnings("unchecked")
-    default <E> Folder<E[], T> toArrayTo(IntFunction<E[]> generator) {
-        List<T> list = toBatchList().eval();
-        return new Folder<E[], T>(this) {
+    default <E> Folder<E[], T> toArrayBy(IntFunction<E[]> generator) {
+        return new SimpleFolder<E[], T>(this, generator.apply(count().eval())) {
             int i = 0;
-            E[] a = generator.apply(list.size());
 
             @Override
             public void accept(T t) {
-                a[i++] = (E)t;
-            }
-
-            @Override
-            public E[] get() {
-                return a;
+                acc[i++] = (E)t;
             }
         };
     }

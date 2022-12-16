@@ -171,20 +171,12 @@ public interface IntFoldable extends Foldable0<IntConsumer> {
     }
 
     default IntFolder<int[]> toArray() {
-        IntSeq seq = this::eval;
-        BatchList<Integer> list = seq.boxed().toBatchList().eval();
-        return new IntFolder<int[]>(this) {
+        return new SimpleIntFolder<int[]>(this, new int[count().eval()]) {
             int i = 0;
-            int[] a = new int[list.size()];
 
             @Override
             public void accept(int t) {
-                a[i++] = t;
-            }
-
-            @Override
-            public int[] get() {
-                return a;
+                acc[i++] = t;
             }
         };
     }
