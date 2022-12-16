@@ -438,7 +438,7 @@ public interface Seq<T> {
     default <E> Seq<E> mapSub(Predicate<T> first, Predicate<T> last, ToFolder<T, E> toFolder) {
         return c -> eval(fold((Folder<E, T>)null, (f, t) -> {
             if (f == null && first.test(t)) {
-                f = toFolder.empty();
+                f = toFolder.gen();
                 f.accept(t);
             } else if (f != null) {
                 f.accept(t);
@@ -770,11 +770,29 @@ public interface Seq<T> {
     }
 
     default Seq<T> cache() {
-        return of(toBatchList().eval());
+        return toBatchList().eval();
     }
 
-    default <K> Grouping<T, K> groupBy(Function<T, K> kFunction) {
-        return new Grouping<>(this, kFunction);
+    default <K, V> SeqMap<K, Supplier<V>> groupBy(Function<T, K> kFunction, Seq.ToFolder<T, V> toFolder) {
+        return groupBy(kFunction, null, 10, toFolder);
+    }
+
+    default <K, V> SeqMap<K, Supplier<V>> groupBy(Function<T, K> kFunction, int groupSize, Seq.ToFolder<T, V> toFolder) {
+        return groupBy(kFunction, null, groupSize, toFolder);
+    }
+
+    default <K, V> SeqMap<K, Supplier<V>> groupBy(Function<T, K> kFunction, Class<? extends Map<?, ?>> mapClass, Seq.ToFolder<T, V> toFolder) {
+        return groupBy(kFunction, mapClass, 10, toFolder);
+    }
+
+    default <K, V> SeqMap<K, Supplier<V>> groupBy(Function<T, K> kFunction, Class<? extends Map<?, ?>> mapClass, int groupSize, Seq.ToFolder<T, V> toFolder) {
+        Map<K, Supplier<V>> map = SeqMap.makeMap(groupSize, mapClass);
+        eval(t -> {
+            K k = kFunction.apply(t);
+            Supplier<V> folder = map.computeIfAbsent(k, it -> toFolder.gen());
+            ((Seq.Folder<V, T>)folder).accept(t);
+        });
+        return new SeqMap<>(map);
     }
 
     default <K, V> Folder<Map<K, V>, T> toMap(Function<T, K> kFunction, Function<T, V> vFunction) {
@@ -892,7 +910,7 @@ public interface Seq<T> {
     }
 
     interface ToFolder<T, E> extends Function<Seq<T>, Folder<E, T>> {
-        default Folder<E, T> empty() {
+        default Folder<E, T> gen() {
             return apply(Seq.empty());
         }
     }

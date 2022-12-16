@@ -158,9 +158,8 @@ public class SeqTest {
                 new Triple<>("john", 2009, "success"),
                 new Triple<>("chris", 2007, "fail"),
                 new Triple<>("john", 2005, "fail"))
-            .groupBy(r -> r.first)
-            .eval(Seq::count)
-            .replaceValues(Supplier::get);
+            .groupBy(r -> r.first, Seq::count)
+            .mapValue(Supplier::get);
         System.out.println(map);
     }
 

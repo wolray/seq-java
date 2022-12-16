@@ -420,7 +420,7 @@ public interface IntSeq {
     }
 
     interface ToIntFolder<T> extends Function<IntSeq, IntFolder<T>> {
-        default IntFolder<T> empty() {
+        default IntFolder<T> gen() {
             return apply(empty);
         }
     }
