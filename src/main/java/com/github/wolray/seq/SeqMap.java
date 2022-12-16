@@ -28,7 +28,7 @@ public class SeqMap<K, V> extends BackedSeq<Map.Entry<K, V>, Set<Map.Entry<K, V>
         return new SeqMap<>(new TreeMap<>(comparator));
     }
 
-    static <K, V> Map<K, V> makeMap(int size, Class<?> mapClass) {
+    public static <K, V> Map<K, V> makeMap(int size, Class<?> mapClass) {
         if (mapClass == null || HashMap.class.equals(mapClass)) {
             return new HashMap<>(size);
         }

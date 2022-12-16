@@ -150,7 +150,7 @@ public class SeqTest {
 
     @Test
     public void testSubCollect() {
-        Map<String, Integer> map = Seq.of(
+        SeqMap<String, Integer> map = Seq.of(
                 new Triple<>("john", 2015, "success"),
                 new Triple<>("john", 2013, "fail"),
                 new Triple<>("chris", 2013, "success"),
@@ -158,7 +158,7 @@ public class SeqTest {
                 new Triple<>("john", 2009, "success"),
                 new Triple<>("chris", 2007, "fail"),
                 new Triple<>("john", 2005, "fail"))
-            .groupBy(r -> r.first, Seq::count)
+            .groupBy(r -> r.first, HashMap.class, Seq::count)
             .mapValue(Supplier::get);
         System.out.println(map);
     }

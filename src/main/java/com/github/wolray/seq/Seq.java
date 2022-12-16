@@ -781,11 +781,13 @@ public interface Seq<T> {
         return groupBy(kFunction, null, groupSize, toFolder);
     }
 
-    default <K, V> SeqMap<K, Supplier<V>> groupBy(Function<T, K> kFunction, Class<? extends Map<?, ?>> mapClass, Seq.ToFolder<T, V> toFolder) {
+    @SuppressWarnings("rawtypes")
+    default <K, V> SeqMap<K, Supplier<V>> groupBy(Function<T, K> kFunction, Class<? extends Map> mapClass, Seq.ToFolder<T, V> toFolder) {
         return groupBy(kFunction, mapClass, 10, toFolder);
     }
 
-    default <K, V> SeqMap<K, Supplier<V>> groupBy(Function<T, K> kFunction, Class<? extends Map<?, ?>> mapClass, int groupSize, Seq.ToFolder<T, V> toFolder) {
+    @SuppressWarnings("rawtypes")
+    default <K, V> SeqMap<K, Supplier<V>> groupBy(Function<T, K> kFunction, Class<? extends Map> mapClass, int groupSize, Seq.ToFolder<T, V> toFolder) {
         Map<K, Supplier<V>> map = SeqMap.makeMap(groupSize, mapClass);
         eval(t -> {
             K k = kFunction.apply(t);
