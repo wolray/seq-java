@@ -17,8 +17,8 @@ public interface Seq<T> {
         } catch (StopException ignore) {}
     }
 
-    default <E> Feeder<E, T> feed(E des, BiConsumer<E, T> consumer) {
-        return new Feeder<E, T>(this) {
+    default <E> Folder<E, T> feed(E des, BiConsumer<E, T> consumer) {
+        return new Folder<E, T>(this) {
             @Override
             public E get() {
                 return des;
@@ -31,8 +31,27 @@ public interface Seq<T> {
         };
     }
 
-    default <E> Feeder<E, T> fold(E init, BiFunction<E, T, E> function) {
-        return new Feeder<E, T>(this) {
+    default <E> Folder<E, T> find(E ifNotFound, Predicate<T> predicate, Function<T, E> function) {
+        return new Folder<E, T>(this) {
+            E e = ifNotFound;
+
+            @Override
+            public E get() {
+                return e;
+            }
+
+            @Override
+            public void accept(T t) {
+                if (predicate.test(t)) {
+                    e = function.apply(t);
+                    stop();
+                }
+            }
+        };
+    }
+
+    default <E> Folder<E, T> fold(E init, BiFunction<E, T, E> function) {
+        return new Folder<E, T>(this) {
             E e = init;
 
             @Override
@@ -47,23 +66,23 @@ public interface Seq<T> {
         };
     }
 
-    default IntFeeder<T> foldIndexed(IndexedConsumer<T> consumer) {
+    default Folder<Integer, T> foldIndexed(IndexedConsumer<T> consumer) {
         return foldIndexed(0, consumer);
     }
 
-    default IntFeeder<T> foldIndexed(int start, IndexedConsumer<T> consumer) {
+    default Folder<Integer, T> foldIndexed(int start, IndexedConsumer<T> consumer) {
         return foldInt(start, (i, t) -> {
             consumer.accept(i, t);
             return i + 1;
         });
     }
 
-    default IntFeeder<T> foldInt(int init, IntBiFunction<T> function) {
-        return new IntFeeder<T>(this) {
+    default Folder<Integer, T> foldInt(int init, IntBiFunction<T> function) {
+        return new Folder<Integer, T>(this) {
             int i = init;
 
             @Override
-            public int getAsInt() {
+            public Integer get() {
                 return i;
             }
 
@@ -74,12 +93,12 @@ public interface Seq<T> {
         };
     }
 
-    default DoubleFeeder<T> foldDouble(double init, DoubleBiFunction<T> function) {
-        return new DoubleFeeder<T>(this) {
+    default Folder<Double, T> foldDouble(double init, DoubleBiFunction<T> function) {
+        return new Folder<Double, T>(this) {
             double d = init;
 
             @Override
-            public double getAsDouble() {
+            public Double get() {
                 return d;
             }
 
@@ -90,12 +109,12 @@ public interface Seq<T> {
         };
     }
 
-    default LongFeeder<T> foldLong(long init, LongBiFunction<T> function) {
-        return new LongFeeder<T>(this) {
+    default Folder<Long, T> foldLong(long init, LongBiFunction<T> function) {
+        return new Folder<Long, T>(this) {
             long i = init;
 
             @Override
-            public long getAsLong() {
+            public Long get() {
                 return i;
             }
 
@@ -106,12 +125,12 @@ public interface Seq<T> {
         };
     }
 
-    default BoolFeeder<T> foldBool(boolean init, BoolBiFunction<T> function) {
-        return new BoolFeeder<T>(this) {
+    default Folder<Boolean, T> foldBool(boolean init, BoolBiFunction<T> function) {
+        return new Folder<Boolean, T>(this) {
             boolean b = init;
 
             @Override
-            public boolean getAsBoolean() {
+            public Boolean get() {
                 return b;
             }
 
@@ -177,12 +196,6 @@ public interface Seq<T> {
         };
     }
 
-    static <T> Seq<T> empty() {
-        return c -> {};
-    }
-
-    static <T> void nothing(T t) {}
-
     default IntSeq mapToInt(ToIntFunction<T> function) {
         return c -> eval(t -> c.accept(function.applyAsInt(t)));
     }
@@ -232,12 +245,12 @@ public interface Seq<T> {
 
     default Seq<T> onLast(Consumer<T> consumer) {
         return c -> {
-            Feeder<T, T> feeder = fold(null, (m, t) -> {
+            Folder<T, T> folder = fold(null, (m, t) -> {
                 c.accept(t);
                 return t;
             });
-            eval(feeder);
-            consumer.accept(feeder.get());
+            eval(folder);
+            consumer.accept(folder.get());
         };
     }
 
@@ -284,7 +297,7 @@ public interface Seq<T> {
     }
 
     default Seq<T> drop(int n) {
-        return forFirst(n, Seq::nothing);
+        return forFirst(n, Seq.nothing());
     }
 
     default Seq<T> forFirst(Consumer<T> consumer) {
@@ -386,7 +399,7 @@ public interface Seq<T> {
 
     default Seq<SeqList<T>> chunked(int size) {
         return c -> {
-            Feeder<SeqList<T>, T> feeder = fold(new SeqList<>(new ArrayList<>(size)), (ls, t) -> {
+            Folder<SeqList<T>, T> folder = fold(new SeqList<>(new ArrayList<>(size)), (ls, t) -> {
                 if (ls.size() >= size) {
                     c.accept(ls);
                     ls = new SeqList<>(new ArrayList<>(size));
@@ -394,8 +407,8 @@ public interface Seq<T> {
                 ls.add(t);
                 return ls;
             });
-            eval(feeder);
-            SeqList<T> last = feeder.get();
+            eval(folder);
+            SeqList<T> last = folder.get();
             if (last.isNotEmpty()) {
                 c.accept(last);
             }
@@ -414,18 +427,18 @@ public interface Seq<T> {
         }));
     }
 
-    default <E> Seq<E> mapSub(T first, T last, FeederFunction<T, E> function) {
+    default <E> Seq<E> mapSub(T first, T last, ToFolder<T, E> function) {
         return mapSub(first::equals, last::equals, function);
     }
 
-    default <E, V> Seq<E> mapSub(V first, V last, Function<T, V> function, FeederFunction<T, E> feederFunction) {
-        return mapSub(t -> first.equals(function.apply(t)), t -> last.equals(function.apply(t)), feederFunction);
+    default <E, V> Seq<E> mapSub(V first, V last, Function<T, V> function, ToFolder<T, E> toFolder) {
+        return mapSub(t -> first.equals(function.apply(t)), t -> last.equals(function.apply(t)), toFolder);
     }
 
-    default <E> Seq<E> mapSub(Predicate<T> first, Predicate<T> last, FeederFunction<T, E> feederFunction) {
-        return c -> eval(fold((Feeder<E, T>)null, (f, t) -> {
+    default <E> Seq<E> mapSub(Predicate<T> first, Predicate<T> last, ToFolder<T, E> toFolder) {
+        return c -> eval(fold((Folder<E, T>)null, (f, t) -> {
             if (f == null && first.test(t)) {
-                f = feederFunction.toFeeder();
+                f = toFolder.empty();
                 f.accept(t);
             } else if (f != null) {
                 f.accept(t);
@@ -465,8 +478,8 @@ public interface Seq<T> {
 
     default Seq<List<T>> permute(boolean inplace) {
         return c -> {
-            Feeder<ArrayList<T>, T> feeder = toArrayList();
-            SeqUtil.permute(c, feeder.eval(), 0, inplace);
+            Folder<ArrayList<T>, T> folder = toArrayList();
+            SeqUtil.permute(c, folder.eval(), 0, inplace);
         };
     }
 
@@ -512,170 +525,89 @@ public interface Seq<T> {
         });
     }
 
-    default BoolFeeder<T> any(boolean ifFound, Predicate<T> predicate) {
-        return new BoolFeeder<T>(this) {
-            boolean b = !ifFound;
-
-            @Override
-            public boolean getAsBoolean() {
-                return b;
-            }
-
-            @Override
-            public void accept(T t) {
-                if (predicate.test(t)) {
-                    b = ifFound;
-                    stop();
-                }
-            }
-        };
+    default Folder<Boolean, T> any(boolean ifFound, Predicate<T> predicate) {
+        return find(!ifFound, predicate, t -> ifFound);
     }
 
-    default BoolFeeder<T> any(Predicate<T> predicate) {
+    default Folder<Boolean, T> any(Predicate<T> predicate) {
         return any(true, predicate);
     }
 
-    default BoolFeeder<T> anyNot(Predicate<T> predicate) {
+    default Folder<Boolean, T> anyNot(Predicate<T> predicate) {
         return any(predicate.negate());
     }
 
-    default BoolFeeder<T> all(Predicate<T> predicate) {
+    default Folder<Boolean, T> all(Predicate<T> predicate) {
         return any(false, predicate.negate());
     }
 
-    default BoolFeeder<T> none(Predicate<T> predicate) {
+    default Folder<Boolean, T> none(Predicate<T> predicate) {
         return any(false, predicate);
     }
 
-    default Feeder<T, T> first() {
-        return new Feeder<T, T>(this) {
-            T t = null;
-
-            @Override
-            public T get() {
-                return t;
-            }
-
-            @Override
-            public void accept(T t) {
-                this.t = t;
-                stop();
-            }
-        };
+    default Folder<T, T> first() {
+        return find(null, t -> true, t -> t);
     }
 
-    default Feeder<T, T> firstNotNull() {
+    default Folder<T, T> firstNotNull() {
         return first(Objects::nonNull);
     }
 
-    default Feeder<T, T> first(Predicate<T> predicate) {
-        return new Feeder<T, T>(this) {
-            T t = null;
-
-            @Override
-            public T get() {
-                return t;
-            }
-
-            @Override
-            public void accept(T t) {
-                if (predicate.test(t)) {
-                    this.t = t;
-                    stop();
-                }
-            }
-        };
+    default Folder<T, T> first(Predicate<T> predicate) {
+        return find(null, predicate, t -> t);
     }
 
-    default Feeder<T, T> firstNot(Predicate<T> predicate) {
+    default Folder<T, T> firstNot(Predicate<T> predicate) {
         return first(predicate.negate());
     }
 
-    default Feeder<T, T> last() {
-        return new Feeder<T, T>(this) {
-            T t = null;
-
-            @Override
-            public T get() {
-                return t;
-            }
-
-            @Override
-            public void accept(T t) {
-                this.t = t;
-            }
-        };
+    default Folder<T, T> last() {
+        return fold(null, (res, t) -> t);
     }
 
-    default Feeder<T, T> last(Predicate<T> predicate) {
-        return new Feeder<T, T>(this) {
-            T t = null;
-
-            @Override
-            public T get() {
-                return t;
-            }
-
-            @Override
-            public void accept(T t) {
-                if (predicate.test(t)) {
-                    this.t = t;
-                }
-            }
-        };
+    default Folder<T, T> last(Predicate<T> predicate) {
+        return fold(null, (res, t) -> predicate.test(t) ? t : res);
     }
 
-    default Feeder<T, T> lastNot(Predicate<T> predicate) {
+    default Folder<T, T> lastNot(Predicate<T> predicate) {
         return last(predicate.negate());
     }
 
-    default IntFeeder<T> count() {
-        return new IntFeeder<T>(this) {
-            int i = 0;
-
-            @Override
-            public int getAsInt() {
-                return i;
-            }
-
-            @Override
-            public void accept(T t) {
-                i++;
-            }
-        };
+    default Folder<Integer, T> count() {
+        return foldInt(0, (i, t) -> i + 1);
     }
 
-    default IntFeeder<T> count(Predicate<T> predicate) {
+    default Folder<Integer, T> count(Predicate<T> predicate) {
         return sumInt(t -> predicate.test(t) ? 1 : 0);
     }
 
-    default IntFeeder<T> countNot(Predicate<T> predicate) {
+    default Folder<Integer, T> countNot(Predicate<T> predicate) {
         return count(predicate.negate());
     }
 
-    default DoubleFeeder<T> sum(ToDoubleFunction<T> function) {
+    default Folder<Double, T> sum(ToDoubleFunction<T> function) {
         return foldDouble(0, (d, t) -> d + function.applyAsDouble(t));
     }
 
-    default IntFeeder<T> sumInt(ToIntFunction<T> function) {
+    default Folder<Integer, T> sumInt(ToIntFunction<T> function) {
         return foldInt(0, (i, t) -> i + function.applyAsInt(t));
     }
 
-    default LongFeeder<T> sumLong(ToLongFunction<T> function) {
+    default Folder<Long, T> sumLong(ToLongFunction<T> function) {
         return foldLong(0, (i, t) -> i + function.applyAsLong(t));
     }
 
-    default DoubleFeeder<T> average(ToDoubleFunction<T> function) {
+    default Folder<Double, T> average(ToDoubleFunction<T> function) {
         return average(function, null);
     }
 
-    default DoubleFeeder<T> average(ToDoubleFunction<T> function, ToDoubleFunction<T> weightFunction) {
-        return new DoubleFeeder<T>(this) {
+    default Folder<Double, T> average(ToDoubleFunction<T> function, ToDoubleFunction<T> weightFunction) {
+        return new Folder<Double, T>(this) {
             double sum;
             double weight;
 
             @Override
-            public double getAsDouble() {
+            public Double get() {
                 return weight != 0 ? sum / weight : 0;
             }
 
@@ -694,16 +626,11 @@ public interface Seq<T> {
         };
     }
 
-    default Feeder<T, T> max(Comparator<T> comparator) {
-        return fold(null, (f, t) -> {
-            if (f == null || comparator.compare(f, t) < 0) {
-                return t;
-            }
-            return f;
-        });
+    default Folder<T, T> max(Comparator<T> comparator) {
+        return fold(null, (f, t) -> f == null || comparator.compare(f, t) < 0 ? t : f);
     }
 
-    default <V extends Comparable<V>> Feeder<Pair<T, V>, T> maxWith(Function<T, V> function) {
+    default <V extends Comparable<V>> Folder<Pair<T, V>, T> maxWith(Function<T, V> function) {
         return feed(new Pair<>(null, null), (p, t) -> {
             V v = function.apply(t);
             if (p.first == null || p.second.compareTo(v) < 0) {
@@ -713,17 +640,12 @@ public interface Seq<T> {
         });
     }
 
-    default <V extends Comparable<V>> Feeder<T, T> maxBy(Function<T, V> function) {
+    default <V extends Comparable<V>> Folder<T, T> maxBy(Function<T, V> function) {
         return maxWith(function).map(p -> p.first);
     }
 
-    default Feeder<T, T> min(Comparator<T> comparator) {
-        return fold(null, (f, t) -> {
-            if (f == null || comparator.compare(f, t) > 0) {
-                return t;
-            }
-            return f;
-        });
+    default Folder<T, T> min(Comparator<T> comparator) {
+        return fold(null, (f, t) -> f == null || comparator.compare(f, t) > 0 ? t : f);
     }
 
     default <V extends Comparable<V>> Pair<T, V> minWith(Function<T, V> function) {
@@ -804,23 +726,23 @@ public interface Seq<T> {
         }
     }
 
-    default Feeder<ArrayList<T>, T> toArrayList() {
+    default Folder<ArrayList<T>, T> toArrayList() {
         return collectBy(ArrayList::new);
     }
 
-    default Feeder<SinglyList<T>, T> toSinglyList() {
+    default Folder<SinglyList<T>, T> toSinglyList() {
         return collect(new SinglyList<>());
     }
 
-    default Feeder<BatchList<T>, T> toBatchList() {
+    default Folder<BatchList<T>, T> toBatchList() {
         return collect(new BatchList<>());
     }
 
-    default Feeder<BatchList<T>, T> toBatchList(int batchSize) {
+    default Folder<BatchList<T>, T> toBatchList(int batchSize) {
         return collect(new BatchList<>(batchSize));
     }
 
-    default <C extends Collection<T>> Feeder<C, T> collect(C des) {
+    default <C extends Collection<T>> Folder<C, T> collect(C des) {
         return feed(des, Collection::add);
     }
 
@@ -828,19 +750,19 @@ public interface Seq<T> {
         return 10;
     }
 
-    default Feeder<SeqSet<T>, T> toSet() {
+    default Folder<SeqSet<T>, T> toSet() {
         return collectBy(HashSet::new).map(SeqSet::new);
     }
 
-    default Feeder<SeqList<T>, T> toList() {
+    default Folder<SeqList<T>, T> toList() {
         return collectBy(ArrayList::new).map(SeqList::new);
     }
 
-    default <C extends Collection<T>> Feeder<C, T> collectBy(IntFunction<C> bySize) {
+    default <C extends Collection<T>> Folder<C, T> collectBy(IntFunction<C> bySize) {
         return feed(bySize.apply(sizeOrDefault()), Collection::add);
     }
 
-    default Feeder<Pair<BatchList<T>, BatchList<T>>, T> partition(Predicate<T> predicate) {
+    default Folder<Pair<BatchList<T>, BatchList<T>>, T> partition(Predicate<T> predicate) {
         return fold(new Pair<>(new BatchList<>(), new BatchList<>()), (p, t) -> {
             (predicate.test(t) ? p.first : p.second).add(t);
             return p;
@@ -855,37 +777,36 @@ public interface Seq<T> {
         return new Grouping<>(this, kFunction);
     }
 
-    default <K, V> Feeder<Map<K, V>, T> toMap(Function<T, K> kFunction, Function<T, V> vFunction) {
+    default <K, V> Folder<Map<K, V>, T> toMap(Function<T, K> kFunction, Function<T, V> vFunction) {
         return toMap(new HashMap<>(sizeOrDefault()), kFunction, vFunction);
     }
 
-    default <K> Feeder<Map<K, T>, T> toMapBy(Function<T, K> kFunction) {
+    default <K> Folder<Map<K, T>, T> toMapBy(Function<T, K> kFunction) {
         return toMapBy(new HashMap<>(sizeOrDefault()), kFunction);
     }
 
-    default <V> Feeder<Map<T, V>, T> toMapWith(Function<T, V> vFunction) {
+    default <V> Folder<Map<T, V>, T> toMapWith(Function<T, V> vFunction) {
         return toMapWith(new HashMap<>(sizeOrDefault()), vFunction);
     }
 
-    default <K, V> Feeder<Map<K, V>, T> toMap(Map<K, V> des, Function<T, K> kFunction, Function<T, V> vFunction) {
+    default <K, V> Folder<Map<K, V>, T> toMap(Map<K, V> des, Function<T, K> kFunction, Function<T, V> vFunction) {
         return feed(des, (res, t) -> res.put(kFunction.apply(t), vFunction.apply(t)));
     }
 
-    default <K> Feeder<Map<K, T>, T> toMapBy(Map<K, T> des, Function<T, K> kFunction) {
+    default <K> Folder<Map<K, T>, T> toMapBy(Map<K, T> des, Function<T, K> kFunction) {
         return feed(des, (res, t) -> res.put(kFunction.apply(t), t));
     }
 
-    default <V> Feeder<Map<T, V>, T> toMapWith(Map<T, V> des, Function<T, V> vFunction) {
+    default <V> Folder<Map<T, V>, T> toMapWith(Map<T, V> des, Function<T, V> vFunction) {
         return feed(des, (res, t) -> res.put(t, vFunction.apply(t)));
     }
 
-    default Feeder<String, T> join(String sep) {
+    default Folder<String, T> join(String sep) {
         return join(sep, String::valueOf);
     }
 
-    default Feeder<String, T> join(String sep, Function<T, String> function) {
-        Feeder<StringJoiner, T> feed = feed(new StringJoiner(sep), (j, t) -> j.add(function.apply(t)));
-        return feed.map(StringJoiner::toString);
+    default Folder<String, T> join(String sep, Function<T, String> function) {
+        return feed(new StringJoiner(sep), (j, t) -> j.add(function.apply(t))).map(StringJoiner::toString);
     }
 
     default void assertTo(String s) {
@@ -924,10 +845,29 @@ public interface Seq<T> {
         };
     }
 
-    abstract class Feeder<E, T> implements Consumer<T>, Supplier<E> {
+    static <E> E stop() throws StopException {
+        throw StopException.INSTANCE;
+    }
+
+    class Empty {
+        static Seq<Object> emptySeq = c -> {};
+        static Consumer<Object> nothing = t -> {};
+    }
+
+    @SuppressWarnings("unchecked")
+    static <T> Seq<T> empty() {
+        return (Seq<T>)Empty.emptySeq;
+    }
+
+    @SuppressWarnings("unchecked")
+    static <T> Consumer<T> nothing() {
+        return (Consumer<T>)Empty.nothing;
+    }
+
+    abstract class Folder<E, T> implements Consumer<T>, Supplier<E> {
         private final Seq<T> seq;
 
-        public Feeder(Seq<T> seq) {
+        public Folder(Seq<T> seq) {
             this.seq = seq;
         }
 
@@ -936,159 +876,23 @@ public interface Seq<T> {
             return get();
         }
 
-        public <R> Feeder<R, T> map(Function<E, R> function) {
-            return new Feeder<R, T>(seq) {
+        public <R> Folder<R, T> map(Function<E, R> function) {
+            return new Folder<R, T>(seq) {
                 @Override
                 public R get() {
-                    return function.apply(Feeder.this.get());
+                    return function.apply(Folder.this.get());
                 }
 
                 @Override
                 public void accept(T t) {
-                    Feeder.this.accept(t);
+                    Folder.this.accept(t);
                 }
             };
         }
     }
 
-    abstract class IntFeeder<T> implements Consumer<T>, IntSupplier {
-        private final Seq<T> seq;
-
-        public IntFeeder(Seq<T> seq) {
-            this.seq = seq;
-        }
-
-        public int eval() {
-            seq.tillStop(this);
-            return getAsInt();
-        }
-
-        public <E> Feeder<E, T> map(IntFunction<E> function) {
-            return new Feeder<E, T>(seq) {
-                @Override
-                public E get() {
-                    return function.apply(IntFeeder.this.getAsInt());
-                }
-
-                @Override
-                public void accept(T t) {
-                    IntFeeder.this.accept(t);
-                }
-            };
-        }
-    }
-
-    abstract class DoubleFeeder<T> implements Consumer<T>, DoubleSupplier {
-        private final Seq<T> seq;
-
-        public DoubleFeeder(Seq<T> seq) {
-            this.seq = seq;
-        }
-
-        public double eval() {
-            seq.tillStop(this);
-            return getAsDouble();
-        }
-
-        public <E> Feeder<E, T> map(DoubleFunction<E> function) {
-            return new Feeder<E, T>(seq) {
-                @Override
-                public E get() {
-                    return function.apply(DoubleFeeder.this.getAsDouble());
-                }
-
-                @Override
-                public void accept(T t) {
-                    DoubleFeeder.this.accept(t);
-                }
-            };
-        }
-    }
-
-    abstract class LongFeeder<T> implements Consumer<T>, LongSupplier {
-        private final Seq<T> seq;
-
-        public LongFeeder(Seq<T> seq) {
-            this.seq = seq;
-        }
-
-        public long eval() {
-            seq.tillStop(this);
-            return getAsLong();
-        }
-
-        public <E> Feeder<E, T> map(LongFunction<E> function) {
-            return new Feeder<E, T>(seq) {
-                @Override
-                public E get() {
-                    return function.apply(LongFeeder.this.getAsLong());
-                }
-
-                @Override
-                public void accept(T t) {
-                    LongFeeder.this.accept(t);
-                }
-            };
-        }
-    }
-
-    abstract class BoolFeeder<T> implements Consumer<T>, BooleanSupplier {
-        private final Seq<T> seq;
-
-        public BoolFeeder(Seq<T> seq) {
-            this.seq = seq;
-        }
-
-        public boolean eval() {
-            seq.tillStop(this);
-            return getAsBoolean();
-        }
-
-        public <E> Feeder<E, T> map(BoolFunction<E> function) {
-            return new Feeder<E, T>(seq) {
-                @Override
-                public E get() {
-                    return function.apply(BoolFeeder.this.getAsBoolean());
-                }
-
-                @Override
-                public void accept(T t) {
-                    BoolFeeder.this.accept(t);
-                }
-            };
-        }
-    }
-
-    static <E> E stop() throws StopException {
-        throw StopException.INSTANCE;
-    }
-
-    interface FeederFunction<T, E> extends Function<Seq<T>, Feeder<E, T>> {
-        default Feeder<E, T> toFeeder() {
-            return apply(Seq.empty());
-        }
-    }
-
-    interface IntFeederFunction<T> extends Function<Seq<T>, IntFeeder<T>> {
-        default IntFeeder<T> toFeeder() {
-            return apply(Seq.empty());
-        }
-    }
-
-    interface DoubleFeederFunction<T> extends Function<Seq<T>, DoubleFeeder<T>> {
-        default DoubleFeeder<T> toFeeder() {
-            return apply(Seq.empty());
-        }
-    }
-
-    interface LongFeederFunction<T> extends Function<Seq<T>, LongFeeder<T>> {
-        default LongFeeder<T> toFeeder() {
-            return apply(Seq.empty());
-        }
-    }
-
-    interface BoolFeederFunction<T> extends Function<Seq<T>, BoolFeeder<T>> {
-        default BoolFeeder<T> toFeeder() {
+    interface ToFolder<T, E> extends Function<Seq<T>, Folder<E, T>> {
+        default Folder<E, T> empty() {
             return apply(Seq.empty());
         }
     }

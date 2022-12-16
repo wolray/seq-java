@@ -8,8 +8,8 @@ import java.util.function.*;
  * @author wolray
  */
 public interface IntSeq {
-    IntConsumer nothing = t -> {};
     IntSeq empty = c -> {};
+    IntConsumer nothing = t -> {};
 
     void eval(IntConsumer consumer);
 
@@ -19,26 +19,82 @@ public interface IntSeq {
         } catch (Seq.StopException ignore) {}
     }
 
-    default int evalIndexed(IndexedIntConsumer consumer) {
-        return evalIndexed(0, consumer);
+    default <E> IntFolder<E> find(E ifNotFound, IntPredicate predicate, IntFunction<E> function) {
+        return new IntFolder<E>(this) {
+            E e = ifNotFound;
+
+            @Override
+            public E get() {
+                return e;
+            }
+
+            @Override
+            public void accept(int t) {
+                if (predicate.test(t)) {
+                    e = function.apply(t);
+                    Seq.stop();
+                }
+            }
+        };
     }
 
-    default int evalIndexed(int start, IndexedIntConsumer consumer) {
-        int[] a = new int[]{start};
-        tillStop(t -> consumer.accept(a[0]++, t));
-        return a[0];
+    default <E> IntFolder<E> fold(E init, IntBiFunction<E> function) {
+        return new IntFolder<E>(this) {
+            E e = init;
+
+            @Override
+            public E get() {
+                return e;
+            }
+
+            @Override
+            public void accept(int t) {
+                e = function.apply(e, t);
+            }
+        };
     }
 
-    default int evalOnInt(int init, IntBiConsumer<int[]> consumer) {
-        int[] a = new int[]{init};
-        tillStop(t -> consumer.accept(a, t));
-        return a[0];
+    default IntFolder<Integer> foldIndexed(IndexedIntConsumer consumer) {
+        return foldIndexed(0, consumer);
     }
 
-    default boolean evalOnBool(boolean init, IntBiConsumer<boolean[]> consumer) {
-        boolean[] a = new boolean[]{init};
-        tillStop(t -> consumer.accept(a, t));
-        return a[0];
+    default IntFolder<Integer> foldIndexed(int start, IndexedIntConsumer consumer) {
+        return foldInt(start, (i, t) -> {
+            consumer.accept(i, t);
+            return i + 1;
+        });
+    }
+
+    default IntFolder<Integer> foldInt(int init, IntBinaryOperator function) {
+        return new IntFolder<Integer>(this) {
+            int i = init;
+
+            @Override
+            public Integer get() {
+                return i;
+            }
+
+            @Override
+            public void accept(int t) {
+                i = function.applyAsInt(i, t);
+            }
+        };
+    }
+
+    default IntFolder<Boolean> foldBool(boolean init, BoolBiFunction function) {
+        return new IntFolder<Boolean>(this) {
+            boolean b = init;
+
+            @Override
+            public Boolean get() {
+                return b;
+            }
+
+            @Override
+            public void accept(int t) {
+                b = function.apply(b, t);
+            }
+        };
     }
 
     static IntSeq of(int... ts) {
@@ -114,7 +170,11 @@ public interface IntSeq {
         return c -> eval(c::accept);
     }
 
-    default <E> Seq<E> map(IntFunction<E> function) {
+    default IntSeq map(IntUnaryOperator function) {
+        return c -> eval(t -> c.accept(function.applyAsInt(t)));
+    }
+
+    default <E> Seq<E> mapToObj(IntFunction<E> function) {
         return c -> eval(t -> c.accept(function.apply(t)));
     }
 
@@ -123,10 +183,10 @@ public interface IntSeq {
     }
 
     default IntSeq onEachIndexed(IndexedIntConsumer consumer) {
-        return c -> evalIndexed((i, t) -> {
+        return c -> eval(foldIndexed((i, t) -> {
             consumer.accept(i, t);
             c.accept(t);
-        });
+        }));
     }
 
     default IntSeq filter(IntPredicate predicate) {
@@ -142,13 +202,13 @@ public interface IntSeq {
     }
 
     default IntSeq take(int n) {
-        return c -> evalIndexed((i, t) -> {
+        return c -> eval(foldIndexed((i, t) -> {
             if (i < n) {
                 c.accept(t);
             } else {
                 Seq.stop();
             }
-        });
+        }));
     }
 
     default IntSeq drop(int n) {
@@ -160,7 +220,7 @@ public interface IntSeq {
     }
 
     default IntSeq forFirst(int n, IntConsumer consumer) {
-        return c -> evalIndexed((i, t) -> (i >= n ? c : consumer).accept(t));
+        return c -> eval(foldIndexed((i, t) -> (i >= n ? c : consumer).accept(t)));
     }
 
     default IntSeq takeWhile(IntPredicate predicate) {
@@ -174,14 +234,15 @@ public interface IntSeq {
     }
 
     default IntSeq dropWhile(IntPredicate predicate) {
-        return c -> evalOnBool(false, (a, t) -> {
-            if (a[0]) {
+        return c -> eval(foldBool(false, (b, t) -> {
+            if (b) {
                 c.accept(t);
             } else if (!predicate.test(t)) {
                 c.accept(t);
-                a[0] = true;
+                return true;
             }
-        });
+            return false;
+        }));
     }
 
     default IntSeq distinct() {
@@ -197,6 +258,14 @@ public interface IntSeq {
 
     default IntSeq flatMap(IntFunction<IntSeq> function) {
         return c -> eval(t -> function.apply(t).eval(c));
+    }
+
+    default IntSeq runningFold(int init, IntBinaryOperator function) {
+        return c -> eval(fold(init, (acc, t) -> {
+            acc = function.applyAsInt(acc, t);
+            c.accept(acc);
+            return acc;
+        }));
     }
 
     default IntSeq append(int t, int... more) {
@@ -216,33 +285,52 @@ public interface IntSeq {
         };
     }
 
-    default boolean any(boolean ifFound, IntPredicate predicate) {
-        return evalOnBool(!ifFound, (a, t) -> {
-            if (predicate.test(t)) {
-                a[0] = ifFound;
-                Seq.stop();
-            }
-        });
+    default IntFolder<Boolean> any(boolean ifFound, IntPredicate predicate) {
+        return find(!ifFound, predicate, t -> ifFound);
     }
 
-    default boolean any(IntPredicate predicate) {
+    default IntFolder<Boolean> any(IntPredicate predicate) {
         return any(true, predicate);
     }
 
-    default boolean anyNot(IntPredicate predicate) {
+    default IntFolder<Boolean> anyNot(IntPredicate predicate) {
         return any(predicate.negate());
     }
 
-    default boolean all(IntPredicate predicate) {
+    default IntFolder<Boolean> all(IntPredicate predicate) {
         return any(false, predicate.negate());
     }
 
-    default boolean none(IntPredicate predicate) {
+    default IntFolder<Boolean> none(IntPredicate predicate) {
         return any(false, predicate);
     }
 
-    default int count() {
-        return evalIndexed((i, t) -> {});
+    default IntFolder<Integer> first() {
+        return find(null, t -> true, t -> t);
+    }
+
+    default IntFolder<Integer> first(IntPredicate predicate) {
+        return find(null, predicate, t -> t);
+    }
+
+    default IntFolder<Integer> firstNot(IntPredicate predicate) {
+        return first(predicate.negate());
+    }
+
+    default IntFolder<Integer> last() {
+        return fold(null, (res, t) -> t);
+    }
+
+    default IntFolder<Integer> last(IntPredicate predicate) {
+        return fold(null, (res, t) -> predicate.test(t) ? t : res);
+    }
+
+    default IntFolder<Integer> lastNot(IntPredicate predicate) {
+        return last(predicate.negate());
+    }
+
+    default IntFolder<Integer> count() {
+        return foldInt(0, (i, t) -> i + 1);
     }
 
     default int count(IntPredicate predicate) {
@@ -254,39 +342,102 @@ public interface IntSeq {
     }
 
     default int sum() {
-        return evalOnInt(0, (a, t) -> a[0] += t);
+        return foldInt(0, Integer::sum).eval();
     }
 
     default int sum(IntUnaryOperator function) {
-        return evalOnInt(0, (a, t) -> a[0] += function.applyAsInt(t));
+        return foldInt(0, (i, t) -> i + function.applyAsInt(t)).eval();
     }
 
-    default double average() {
+    default IntFolder<Double> average() {
         return average(null);
     }
 
-    default double average(IntToDoubleFunction weightFunction) {
-        double[] sumWithWeight = new double[2];
-        if (weightFunction != null) {
-            eval(t -> {
-                double w = weightFunction.applyAsDouble(t);
-                sumWithWeight[0] += t * w;
-                sumWithWeight[1] += w;
-            });
-        } else {
-            eval(t -> {
-                sumWithWeight[0] += t;
-                sumWithWeight[1] += 1;
-            });
+    default IntFolder<Double> average(IntToDoubleFunction weightFunction) {
+        return new IntFolder<Double>(this) {
+            double sum;
+            double weight;
+
+            @Override
+            public Double get() {
+                return weight != 0 ? sum / weight : 0;
+            }
+
+            @Override
+            public void accept(int t) {
+                if (weightFunction != null) {
+                    double w = weightFunction.applyAsDouble(t);
+                    sum += t * w;
+                    weight += w;
+                } else {
+                    sum += t;
+                    weight += 1;
+                }
+            }
+        };
+    }
+
+    default IntFolder<Integer> max() {
+        return fold(null, (f, t) -> f == null || f < t ? t : f);
+    }
+
+    default IntFolder<Integer> min() {
+        return fold(null, (f, t) -> f == null || f > t ? t : f);
+    }
+
+    default int[] toArray() {
+        BatchList<Integer> list = boxed().toBatchList().eval();
+        int[] res = new int[list.size()];
+        list.foldIndexed((i, t) -> res[i] = t).eval();
+        return res;
+    }
+
+    abstract class IntFolder<E> implements IntConsumer, Supplier<E> {
+        private final IntSeq seq;
+
+        public IntFolder(IntSeq seq) {
+            this.seq = seq;
         }
-        return sumWithWeight[1] > 0 ? sumWithWeight[0] / sumWithWeight[1] : 0;
+
+        public E eval() {
+            seq.tillStop(this);
+            return get();
+        }
+
+        public <R> IntFolder<R> map(Function<E, R> function) {
+            return new IntFolder<R>(seq) {
+                @Override
+                public R get() {
+                    return function.apply(IntFolder.this.get());
+                }
+
+                @Override
+                public void accept(int t) {
+                    IntFolder.this.accept(t);
+                }
+            };
+        }
+    }
+
+    interface ToIntFolder<T> extends Function<IntSeq, IntFolder<T>> {
+        default IntFolder<T> empty() {
+            return apply(empty);
+        }
     }
 
     interface IndexedIntConsumer {
         void accept(int i, int t);
     }
 
+    interface BoolBiFunction {
+        boolean apply(boolean b, int t);
+    }
+
     interface IntBiConsumer<E> {
         void accept(E e, int t);
+    }
+
+    interface IntBiFunction<E> {
+        E apply(E e, int t);
     }
 }

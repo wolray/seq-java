@@ -5,8 +5,8 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.function.IntSupplier;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * @author wolray
@@ -118,7 +118,7 @@ public class SeqTest {
     @Test
     public void testSubLists() {
         IntSeq.of("233(ab:c)114514(d:e:f:g)42")
-            .map(i -> (char)i)
+            .mapToObj(i -> (char)i)
             .mapSub('(', ')', s -> s.join(""))
             .printAll();
     }
@@ -159,8 +159,8 @@ public class SeqTest {
                 new Triple<>("chris", 2007, "fail"),
                 new Triple<>("john", 2005, "fail"))
             .groupBy(r -> r.first)
-            .toInt(Seq::count)
-            .replaceValues(IntSupplier::getAsInt);
+            .eval(Seq::count)
+            .replaceValues(Supplier::get);
         System.out.println(map);
     }
 
