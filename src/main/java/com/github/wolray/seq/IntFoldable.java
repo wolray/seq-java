@@ -238,7 +238,7 @@ public interface IntFoldable {
         }
     }
 
-    interface ToFolder<T> extends Function<IntSeq, IntFolder<T>> {
+    interface ToFolder<T> extends Function<IntFoldable, IntFolder<T>> {
         default IntFolder<T> gen() {
             return apply(IntSeq.empty);
         }
