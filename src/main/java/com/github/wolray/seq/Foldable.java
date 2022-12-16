@@ -8,12 +8,7 @@ import java.util.function.*;
  */
 public interface Foldable<T> extends Foldable0<Consumer<T>> {
     default <E> Folder<E, T> feed(E des, BiConsumer<E, T> consumer) {
-        return new Folder<E, T>(this) {
-            @Override
-            public E get() {
-                return des;
-            }
-
+        return new SimpleFolder<E, T>(this, des) {
             @Override
             public void accept(T t) {
                 consumer.accept(des, t);
@@ -22,18 +17,11 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
     }
 
     default <E> Folder<E, T> find(E ifNotFound, Predicate<T> predicate, Function<T, E> function) {
-        return new Folder<E, T>(this) {
-            E e = ifNotFound;
-
-            @Override
-            public E get() {
-                return e;
-            }
-
+        return new SimpleFolder<E, T>(this, ifNotFound) {
             @Override
             public void accept(T t) {
                 if (predicate.test(t)) {
-                    e = function.apply(t);
+                    acc = function.apply(t);
                     stop();
                 }
             }
@@ -41,17 +29,10 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
     }
 
     default <E> Folder<E, T> fold(E init, BiFunction<E, T, E> function) {
-        return new Folder<E, T>(this) {
-            E e = init;
-
-            @Override
-            public E get() {
-                return e;
-            }
-
+        return new SimpleFolder<E, T>(this, init) {
             @Override
             public void accept(T t) {
-                e = function.apply(e, t);
+                acc = function.apply(acc, t);
             }
         };
     }
@@ -360,6 +341,20 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
 
     default Folder<String, T> join(String sep, Function<T, String> function) {
         return feed(new StringJoiner(sep), (j, t) -> j.add(function.apply(t))).map(StringJoiner::toString);
+    }
+
+    abstract class SimpleFolder<E, T> extends Folder<E, T> {
+        protected E acc;
+
+        public SimpleFolder(Foldable<T> foldable, E init) {
+            super(foldable);
+            acc = init;
+        }
+
+        @Override
+        public E get() {
+            return acc;
+        }
     }
 
     abstract class Folder<E, T> implements Consumer<T>, Supplier<E> {

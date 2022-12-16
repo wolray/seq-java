@@ -7,18 +7,11 @@ import java.util.function.*;
  */
 public interface IntFoldable extends Foldable0<IntConsumer> {
     default <E> IntFolder<E> find(E ifNotFound, IntPredicate predicate, IntFunction<E> function) {
-        return new IntFolder<E>(this) {
-            E e = ifNotFound;
-
-            @Override
-            public E get() {
-                return e;
-            }
-
+        return new SimpleIntFolder<E>(this, ifNotFound) {
             @Override
             public void accept(int t) {
                 if (predicate.test(t)) {
-                    e = function.apply(t);
+                    acc = function.apply(t);
                     stop();
                 }
             }
@@ -26,17 +19,10 @@ public interface IntFoldable extends Foldable0<IntConsumer> {
     }
 
     default <E> IntFolder<E> fold(E init, ObjIntToObj<E> function) {
-        return new IntFolder<E>(this) {
-            E e = init;
-
-            @Override
-            public E get() {
-                return e;
-            }
-
+        return new SimpleIntFolder<E>(this, init) {
             @Override
             public void accept(int t) {
-                e = function.apply(e, t);
+                acc = function.apply(acc, t);
             }
         };
     }
@@ -201,6 +187,20 @@ public interface IntFoldable extends Foldable0<IntConsumer> {
                 return a;
             }
         };
+    }
+
+    abstract class SimpleIntFolder<E> extends IntFolder<E> {
+        protected E acc;
+
+        public SimpleIntFolder(IntFoldable foldable, E acc) {
+            super(foldable);
+            this.acc = acc;
+        }
+
+        @Override
+        public E get() {
+            return acc;
+        }
     }
 
     abstract class IntFolder<E> implements IntConsumer, Supplier<E> {
