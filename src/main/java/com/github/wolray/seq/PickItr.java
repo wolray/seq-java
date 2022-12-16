@@ -42,7 +42,7 @@ public abstract class PickItr<T> implements Seq<T>, Iterator<T> {
             try {
                 next = pick();
                 state = State.Cached;
-            } catch (BaseFoldable.StopException e) {
+            } catch (Foldable0.StopException e) {
                 state = State.Done;
             }
         }
