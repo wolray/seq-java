@@ -53,19 +53,19 @@ public class SeqMap<K, V> extends BackedSeq<Map.Entry<K, V>, Set<Map.Entry<K, V>
         return map.values()::forEach;
     }
 
-    public <E> SeqMap<E, V> mapKey(BiFunction<K, V, E> function) {
+    public <E> SeqMap<E, V> mapByKey(BiFunction<K, V, E> function) {
         return new SeqMap<>(toMap(newMap(map), e -> function.apply(e.getKey(), e.getValue()), Map.Entry::getValue).eval());
     }
 
-    public <E> SeqMap<E, V> mapKey(Function<K, E> function) {
+    public <E> SeqMap<E, V> mapByKey(Function<K, E> function) {
         return new SeqMap<>(toMap(newMap(map), e -> function.apply(e.getKey()), Map.Entry::getValue).eval());
     }
 
-    public <E> SeqMap<K, E> mapValue(BiFunction<K, V, E> function) {
+    public <E> SeqMap<K, E> mapByValue(BiFunction<K, V, E> function) {
         return new SeqMap<>(toMap(newMap(map), Map.Entry::getKey, e -> function.apply(e.getKey(), e.getValue())).eval());
     }
 
-    public <E> SeqMap<K, E> mapValue(Function<V, E> function) {
+    public <E> SeqMap<K, E> mapByValue(Function<V, E> function) {
         return new SeqMap<>(toMap(newMap(map), Map.Entry::getKey, e -> function.apply(e.getValue())).eval());
     }
 

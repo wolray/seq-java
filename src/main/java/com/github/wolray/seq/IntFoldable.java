@@ -7,7 +7,7 @@ import java.util.function.*;
  */
 public interface IntFoldable extends Foldable0<IntConsumer> {
     default <E> IntFolder<E> find(E ifNotFound, IntPredicate predicate, IntFunction<E> function) {
-        return new SimpleIntFolder<E>(this, ifNotFound) {
+        return new AccIntFolder<E>(this, ifNotFound) {
             @Override
             public void accept(int t) {
                 if (predicate.test(t)) {
@@ -19,7 +19,7 @@ public interface IntFoldable extends Foldable0<IntConsumer> {
     }
 
     default <E> IntFolder<E> fold(E init, ObjIntToObj<E> function) {
-        return new SimpleIntFolder<E>(this, init) {
+        return new AccIntFolder<E>(this, init) {
             @Override
             public void accept(int t) {
                 acc = function.apply(acc, t);
@@ -40,32 +40,32 @@ public interface IntFoldable extends Foldable0<IntConsumer> {
 
     default IntFolder<Integer> foldInt(int init, IntBinaryOperator function) {
         return new IntFolder<Integer>(this) {
-            int i = init;
+            int acc = init;
 
             @Override
             public Integer get() {
-                return i;
+                return acc;
             }
 
             @Override
             public void accept(int t) {
-                i = function.applyAsInt(i, t);
+                acc = function.applyAsInt(acc, t);
             }
         };
     }
 
-    default IntFolder<Boolean> foldBool(boolean init, BoolIntToBool function) {
+    default IntFolder<Boolean> foldBool(boolean init, BooleanIntToBoolean function) {
         return new IntFolder<Boolean>(this) {
-            boolean b = init;
+            boolean acc = init;
 
             @Override
             public Boolean get() {
-                return b;
+                return acc;
             }
 
             @Override
             public void accept(int t) {
-                b = function.apply(b, t);
+                acc = function.apply(acc, t);
             }
         };
     }
@@ -171,7 +171,7 @@ public interface IntFoldable extends Foldable0<IntConsumer> {
     }
 
     default IntFolder<int[]> toArray() {
-        return new SimpleIntFolder<int[]>(this, new int[count().eval()]) {
+        return new AccIntFolder<int[]>(this, new int[count().eval()]) {
             int i = 0;
 
             @Override
@@ -181,10 +181,10 @@ public interface IntFoldable extends Foldable0<IntConsumer> {
         };
     }
 
-    abstract class SimpleIntFolder<E> extends IntFolder<E> {
+    abstract class AccIntFolder<E> extends IntFolder<E> {
         protected E acc;
 
-        public SimpleIntFolder(IntFoldable foldable, E acc) {
+        public AccIntFolder(IntFoldable foldable, E acc) {
             super(foldable);
             this.acc = acc;
         }
@@ -192,6 +192,20 @@ public interface IntFoldable extends Foldable0<IntConsumer> {
         @Override
         public E get() {
             return acc;
+        }
+    }
+
+    abstract class MappingIntFolder<E, R> extends IntFolder<R> {
+        final IntFolder<E> folder;
+
+        public MappingIntFolder(IntFolder<E> folder) {
+            super(folder.foldable);
+            this.folder = folder;
+        }
+
+        @Override
+        public void accept(int t) {
+            folder.accept(t);
         }
     }
 
@@ -208,15 +222,21 @@ public interface IntFoldable extends Foldable0<IntConsumer> {
         }
 
         public <R> IntFolder<R> map(Function<E, R> function) {
-            return new IntFolder<R>(foldable) {
+            return new MappingIntFolder<E, R>(this) {
                 @Override
                 public R get() {
                     return function.apply(IntFolder.this.get());
                 }
+            };
+        }
 
+        public IntFolder<E> then(Consumer<E> consumer) {
+            return new MappingIntFolder<E, E>(this) {
                 @Override
-                public void accept(int t) {
-                    IntFolder.this.accept(t);
+                public E get() {
+                    E res = folder.get();
+                    consumer.accept(res);
+                    return res;
                 }
             };
         }
@@ -232,7 +252,7 @@ public interface IntFoldable extends Foldable0<IntConsumer> {
         void accept(int i, int t);
     }
 
-    interface BoolIntToBool {
+    interface BooleanIntToBoolean {
         boolean apply(boolean b, int t);
     }
 

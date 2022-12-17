@@ -8,7 +8,7 @@ import java.util.function.*;
  */
 public interface Foldable<T> extends Foldable0<Consumer<T>> {
     default <E> Folder<E, T> feed(E des, BiConsumer<E, T> consumer) {
-        return new SimpleFolder<E, T>(this, des) {
+        return new AccFolder<E, T>(this, des) {
             @Override
             public void accept(T t) {
                 consumer.accept(des, t);
@@ -17,7 +17,7 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
     }
 
     default <E> Folder<E, T> find(E ifNotFound, Predicate<T> predicate, Function<T, E> function) {
-        return new SimpleFolder<E, T>(this, ifNotFound) {
+        return new AccFolder<E, T>(this, ifNotFound) {
             @Override
             public void accept(T t) {
                 if (predicate.test(t)) {
@@ -29,7 +29,7 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
     }
 
     default <E> Folder<E, T> fold(E init, BiFunction<E, T, E> function) {
-        return new SimpleFolder<E, T>(this, init) {
+        return new AccFolder<E, T>(this, init) {
             @Override
             public void accept(T t) {
                 acc = function.apply(acc, t);
@@ -50,64 +50,64 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
 
     default Folder<Integer, T> foldInt(int init, IntObjToInt<T> function) {
         return new Folder<Integer, T>(this) {
-            int i = init;
+            int acc = init;
 
             @Override
             public Integer get() {
-                return i;
+                return acc;
             }
 
             @Override
             public void accept(T t) {
-                i = function.apply(i, t);
+                acc = function.apply(acc, t);
             }
         };
     }
 
     default Folder<Double, T> foldDouble(double init, DoubleObjToDouble<T> function) {
         return new Folder<Double, T>(this) {
-            double d = init;
+            double acc = init;
 
             @Override
             public Double get() {
-                return d;
+                return acc;
             }
 
             @Override
             public void accept(T t) {
-                d = function.apply(d, t);
+                acc = function.apply(acc, t);
             }
         };
     }
 
     default Folder<Long, T> foldLong(long init, LongObjToLong<T> function) {
         return new Folder<Long, T>(this) {
-            long i = init;
+            long acc = init;
 
             @Override
             public Long get() {
-                return i;
+                return acc;
             }
 
             @Override
             public void accept(T t) {
-                i = function.apply(i, t);
+                acc = function.apply(acc, t);
             }
         };
     }
 
-    default Folder<Boolean, T> foldBool(boolean init, BoolObjToBool<T> function) {
+    default Folder<Boolean, T> foldBoolean(boolean init, BooleanObjToBoolean<T> function) {
         return new Folder<Boolean, T>(this) {
-            boolean b = init;
+            boolean acc = init;
 
             @Override
             public Boolean get() {
-                return b;
+                return acc;
             }
 
             @Override
             public void accept(T t) {
-                b = function.apply(b, t);
+                acc = function.apply(acc, t);
             }
         };
     }
@@ -253,7 +253,7 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
 
     @SuppressWarnings("unchecked")
     default <E> Folder<E[], T> toArrayBy(IntFunction<E[]> generator) {
-        return new SimpleFolder<E[], T>(this, generator.apply(count().eval())) {
+        return new AccFolder<E[], T>(this, generator.apply(count().eval())) {
             int i = 0;
 
             @Override
@@ -261,6 +261,30 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
                 acc[i++] = (E)t;
             }
         };
+    }
+
+    default Folder<SeqList<T>, T> sort() {
+        return sortOn(null);
+    }
+
+    default Folder<SeqList<T>, T> sortOn(Comparator<T> comparator) {
+        return toList().then(it -> it.backer.sort(comparator));
+    }
+
+    default Folder<SeqList<T>, T> sortDesc() {
+        return sortOn(Collections.reverseOrder());
+    }
+
+    default Folder<SeqList<T>, T> sortDesc(Comparator<T> comparator) {
+        return sortOn(comparator.reversed());
+    }
+
+    default <E extends Comparable<E>> Folder<SeqList<T>, T> sortBy(Function<T, E> function) {
+        return sortOn(Comparator.comparing(function));
+    }
+
+    default <E extends Comparable<E>> Folder<SeqList<T>, T> sortDescBy(Function<T, E> function) {
+        return sortOn(Comparator.comparing(function).reversed());
     }
 
     default int sizeOrDefault() {
@@ -304,16 +328,16 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
             (predicate.test(t) ? p.first : p.second).add(t));
     }
 
-    default <K, V> Folder<Map<K, V>, T> toMap(Function<T, K> kFunction, Function<T, V> vFunction) {
-        return toMap(new HashMap<>(sizeOrDefault()), kFunction, vFunction);
+    default <K, V> Folder<SeqMap<K, V>, T> toMap(Function<T, K> kFunction, Function<T, V> vFunction) {
+        return toMap(new HashMap<>(sizeOrDefault()), kFunction, vFunction).map(SeqMap::new);
     }
 
-    default <K> Folder<Map<K, T>, T> toMapBy(Function<T, K> kFunction) {
-        return toMapBy(new HashMap<>(sizeOrDefault()), kFunction);
+    default <K> Folder<SeqMap<K, T>, T> toMapBy(Function<T, K> kFunction) {
+        return toMapBy(new HashMap<>(sizeOrDefault()), kFunction).map(SeqMap::new);
     }
 
-    default <V> Folder<Map<T, V>, T> toMapWith(Function<T, V> vFunction) {
-        return toMapWith(new HashMap<>(sizeOrDefault()), vFunction);
+    default <V> Folder<SeqMap<T, V>, T> toMapWith(Function<T, V> vFunction) {
+        return toMapWith(new HashMap<>(sizeOrDefault()), vFunction).map(SeqMap::new);
     }
 
     default <K, V> Folder<Map<K, V>, T> toMap(Map<K, V> des, Function<T, K> kFunction, Function<T, V> vFunction) {
@@ -328,18 +352,32 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         return feed(des, (res, t) -> res.put(t, vFunction.apply(t)));
     }
 
+    default <K, V> Folder<SeqMap<K, V>, T> groupBy(Function<T, K> kFunction, ToFolder<T, V> toFolder) {
+        return groupBy(new HashMap<>(), kFunction, toFolder);
+    }
+
+    default <K, V> Folder<SeqMap<K, V>, T> groupBy(Map<K, Supplier<V>> map,
+        Function<T, K> kFunction, ToFolder<T, V> toFolder) {
+        return feed(map, (m, t) -> {
+            K k = kFunction.apply(t);
+            Supplier<V> folder = map.computeIfAbsent(k, it -> toFolder.gen());
+            ((Folder<V, T>)folder).accept(t);
+        }).map(m -> new SeqMap<>(m).replaceValue(Supplier::get));
+    }
+
     default Folder<String, T> join(String sep) {
         return join(sep, String::valueOf);
     }
 
     default Folder<String, T> join(String sep, Function<T, String> function) {
-        return feed(new StringJoiner(sep), (j, t) -> j.add(function.apply(t))).map(StringJoiner::toString);
+        return feed(new StringJoiner(sep), (j, t) -> j.add(function.apply(t)))
+            .map(StringJoiner::toString);
     }
 
-    abstract class SimpleFolder<E, T> extends Folder<E, T> {
+    abstract class AccFolder<E, T> extends Folder<E, T> {
         protected E acc;
 
-        public SimpleFolder(Foldable<T> foldable, E init) {
+        public AccFolder(Foldable<T> foldable, E init) {
             super(foldable);
             acc = init;
         }
@@ -347,6 +385,20 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         @Override
         public E get() {
             return acc;
+        }
+    }
+
+    abstract class MappingFolder<E, R, T> extends Folder<R, T> {
+        final Folder<E, T> folder;
+
+        public MappingFolder(Folder<E, T> folder) {
+            super(folder.foldable);
+            this.folder = folder;
+        }
+
+        @Override
+        public void accept(T t) {
+            folder.accept(t);
         }
     }
 
@@ -363,15 +415,21 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         }
 
         public <R> Folder<R, T> map(Function<E, R> function) {
-            return new Folder<R, T>(foldable) {
+            return new MappingFolder<E, R, T>(this) {
                 @Override
                 public R get() {
                     return function.apply(Folder.this.get());
                 }
+            };
+        }
 
+        public Folder<E, T> then(Consumer<E> consumer) {
+            return new MappingFolder<E, E, T>(this) {
                 @Override
-                public void accept(T t) {
-                    Folder.this.accept(t);
+                public E get() {
+                    E res = folder.get();
+                    consumer.accept(res);
+                    return res;
                 }
             };
         }
@@ -399,7 +457,7 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         long apply(long i, T t);
     }
 
-    interface BoolObjToBool<T> {
+    interface BooleanObjToBoolean<T> {
         boolean apply(boolean b, T t);
     }
 }

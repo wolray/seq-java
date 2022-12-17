@@ -214,7 +214,7 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default Seq<T> dropWhile(Predicate<T> predicate) {
-        return c -> eval(foldBool(false, (b, t) -> {
+        return c -> eval(foldBoolean(false, (b, t) -> {
             if (b) {
                 c.accept(t);
             } else if (!predicate.test(t)) {
@@ -383,40 +383,6 @@ public interface Seq<T> extends Foldable<T> {
         });
     }
 
-    default SeqList<T> sort() {
-        return sortOn(null);
-    }
-
-    default SeqList<T> sortOn(Comparator<T> comparator) {
-        SeqList<T> list = toList().eval();
-        list.backer.sort(comparator);
-        return list;
-    }
-
-    default SeqList<T> sortDesc() {
-        return sortOn(Collections.reverseOrder());
-    }
-
-    default SeqList<T> sortDesc(Comparator<T> comparator) {
-        return sortOn(comparator.reversed());
-    }
-
-    default <E extends Comparable<E>> SeqList<T> sortBy(Function<T, E> function) {
-        return sortOn(Comparator.comparing(function));
-    }
-
-    default <E extends Comparable<E>> SeqList<T> sortDescBy(Function<T, E> function) {
-        return sortOn(Comparator.comparing(function).reversed());
-    }
-
-    default <E extends Comparable<E>> SeqList<Pair<T, E>> sortWith(Function<T, E> function) {
-        return pairWith(function).sortBy(p -> p.second);
-    }
-
-    default <E extends Comparable<E>> SeqList<Pair<T, E>> sortDescWith(Function<T, E> function) {
-        return pairWith(function).sortDescBy(p -> p.second);
-    }
-
     default Seq<T> cacheBy(Cache<T> cache) {
         return cacheBy(BatchList.DEFAULT_BATCH_SIZE, cache);
     }
@@ -443,19 +409,6 @@ public interface Seq<T> extends Foldable<T> {
             ForkJoinPool pool = new ForkJoinPool();
             eval(t -> pool.submit(() -> c.accept(t)));
         };
-    }
-
-    default <K, V> SeqMap<K, V> groupBy(Function<T, K> kFunction, ToFolder<T, V> toFolder) {
-        return groupBy(new HashMap<>(), kFunction, toFolder);
-    }
-
-    default <K, V> SeqMap<K, V> groupBy(Map<K, Supplier<V>> map, Function<T, K> kFunction, ToFolder<T, V> toFolder) {
-        eval(t -> {
-            K k = kFunction.apply(t);
-            Supplier<V> folder = map.computeIfAbsent(k, it -> toFolder.gen());
-            ((Folder<V, T>)folder).accept(t);
-        });
-        return new SeqMap<>(map).replaceValue(Supplier::get);
     }
 
     default void assertTo(String s) {
