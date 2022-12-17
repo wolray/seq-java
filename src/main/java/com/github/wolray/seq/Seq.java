@@ -438,24 +438,24 @@ public interface Seq<T> extends Foldable<T> {
         return toBatchList().eval();
     }
 
-    default <K, V> SeqMap<K, Supplier<V>> groupBy(Function<T, K> kFunction, ToFolder<T, V> toFolder) {
-        return groupBy(new HashMap<>(), kFunction, toFolder);
-    }
-
-    default <K, V> SeqMap<K, Supplier<V>> groupBy(Map<K, Supplier<V>> des, Function<T, K> kFunction, ToFolder<T, V> toFolder) {
-        eval(t -> {
-            K k = kFunction.apply(t);
-            Supplier<V> folder = des.computeIfAbsent(k, it -> toFolder.gen());
-            ((Folder<V, T>)folder).accept(t);
-        });
-        return new SeqMap<>(des);
-    }
-
     default ParallelSeq<T> parallel() {
         return this instanceof ParallelSeq ? (ParallelSeq<T>)this : c -> {
             ForkJoinPool pool = new ForkJoinPool();
             eval(t -> pool.submit(() -> c.accept(t)));
         };
+    }
+
+    default <K, V> SeqMap<K, V> groupBy(Function<T, K> kFunction, ToFolder<T, V> toFolder) {
+        return groupBy(new HashMap<>(), kFunction, toFolder);
+    }
+
+    default <K, V> SeqMap<K, V> groupBy(Map<K, Supplier<V>> map, Function<T, K> kFunction, ToFolder<T, V> toFolder) {
+        eval(t -> {
+            K k = kFunction.apply(t);
+            Supplier<V> folder = map.computeIfAbsent(k, it -> toFolder.gen());
+            ((Folder<V, T>)folder).accept(t);
+        });
+        return new SeqMap<>(map).replaceValue(Supplier::get);
     }
 
     default void assertTo(String s) {

@@ -69,6 +69,13 @@ public class SeqMap<K, V> extends BackedSeq<Map.Entry<K, V>, Set<Map.Entry<K, V>
         return new SeqMap<>(toMap(newMap(map), Map.Entry::getKey, e -> function.apply(e.getValue())).eval());
     }
 
+    @SuppressWarnings("unchecked")
+    public <E> SeqMap<K, E> replaceValue(Function<V, E> function) {
+        SeqMap<K, Object> map = (SeqMap<K, Object>)this;
+        map.eval(e -> e.setValue(function.apply((V)e.getValue())));
+        return (SeqMap<K, E>)map;
+    }
+
     @Override
     public String toString() {
         return map.toString();

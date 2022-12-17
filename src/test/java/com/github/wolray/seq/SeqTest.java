@@ -3,9 +3,9 @@ package com.github.wolray.seq;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 /**
  * @author wolray
@@ -166,8 +166,7 @@ public class SeqTest {
                 new Triple<>("john", 2009, "success"),
                 new Triple<>("chris", 2007, "fail"),
                 new Triple<>("john", 2005, "fail"))
-            .groupBy(r -> r.first, Foldable::count)
-            .mapValue(Supplier::get);
+            .groupBy(r -> r.first, Foldable::count);
         System.out.println(map);
     }
 
