@@ -291,10 +291,6 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         return 10;
     }
 
-    default Folder<ArrayList<T>, T> toArrayList() {
-        return collectBy(ArrayList::new);
-    }
-
     default Folder<SinglyList<T>, T> toSinglyList() {
         return collect(new SinglyList<>());
     }
@@ -311,12 +307,16 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         return feed(des, Collection::add);
     }
 
-    default Folder<SeqSet<T>, T> toSet() {
-        return collectBy(HashSet::new).map(SeqSet::new);
+    default Folder<ArrayList<T>, T> toArrayList() {
+        return collectBy(ArrayList::new);
     }
 
     default Folder<SeqList<T>, T> toList() {
         return collectBy(ArrayList::new).map(SeqList::new);
+    }
+
+    default Folder<SeqSet<T>, T> toSet() {
+        return collectBy(HashSet::new).map(SeqSet::new);
     }
 
     default <C extends Collection<T>> Folder<C, T> collectBy(IntFunction<C> bySize) {
