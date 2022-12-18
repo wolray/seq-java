@@ -178,7 +178,11 @@ Seq<Pair<Integer, Integer>> s8 = seq.sortDescWith(i -> 10 - i); // (1,9), (1,9),
 ```
 
 ### Terminal operations
-Like any other streaming API, a `seq` is not evaluated until calling terminal operations.
+Like any other streaming API, a `seq` is not evaluated until calling terminal operations. However, there is an extra abstraction layer between those operations and the real outputs. It is called `Folder`.
+
+With `Folder`, all termination operators returns a `Folder` instance, which is still lazy. The final output is only computed when the `eval()` method is called.
+
+
 #### eval
 Same as Java `stream.forEach` and Kotlin `sequence.forEach`.
 ```java
@@ -192,96 +196,96 @@ seq.evalIndexed((index, i) -> System.out.println(index + " " + i));
 #### fold
 Same as Kotlin `sequence.fold` and a little like Java `stream.reduce`.
 ```java
-Integer sum = seq.fold(0, (acc, i) -> acc + i); // sum by folding each element with initial 0
+Integer sum = seq.fold(0, (acc, i) -> acc + i).eval(); // sum by folding each element with initial 0
 ```
 #### feed
 Giving a destination then feed all elements to it. Works like `fold` but requires a `BiConsumer` rather than `BiFunction`. This is the most frequently used method for terminal operations, and really useful for kinds of unexpected corner cases.
 ```java
-List<Integer> list = seq.feed(new ArrayList<>(), List::add); // collect to list
+List<Integer> list = seq.feed(new ArrayList<>(), List::add).eval(); // collect to list
 ```
 #### collect
 Same as Java `stream.collect(Collectors.toCollection(des))` and Kotlin `sequence.toCollection(des)`, implemented by `feed`. See also `collectBy`.
 ```java
-List<Integer> list = seq.collect(new LinkedList<>());
+List<Integer> list = seq.collect(new LinkedList<>()).eval();
 ```
 #### toList
 Same as Java `stream.collect(Collectors.toList())` and Kotlin `sequence.toList()`, implemented by `collect`.
 ```java
-List<Integer> list = seq.toList();
+List<Integer> list = seq.toList().eval();
 ```
 #### toSet
 Same as Java `stream.collect(Collectors.toSet())` and Kotlin `sequence.toSet()`, implemented by `collect`.
 ```java
-Set<Integer> set = seq.toSet();
+Set<Integer> set = seq.toSet().eval();
 ```
 #### toMap
 Same as Java `stream.collect(Collectors.toMap(...))` and Kotlin `sequence.toMap(...)`, implemented by `feed`.
 ```java
-Map<Integer, String> map = seq.toMap(i -> i, i -> i.toString());
+Map<Integer, String> map = seq.toMap(i -> i, i -> i.toString()).eval();
 ```
 #### toMapBy & toMapWith
 Same as Kotlin `sequence.toMapBy` (creating keys) and `sequence.toMapWith` (creating values), implemented by `feed`.
 ```java
-Map<String, Integer> newKeysMap = seq.toMapBy(i -> i.toString());
-Map<Integer, String> newValuesMap = seq.toMapWith(i -> i.toString());
+Map<String, Integer> newKeysMap = seq.toMapBy(i -> i.toString()).eval();
+Map<Integer, String> newValuesMap = seq.toMapWith(i -> i.toString()).eval();
 ```
 #### groupBy
-Same as Java `stream.collect(Collectors.groupingBy(...))` and Kotlin `sequence.groupingBy`. See also `Grouping.fold`, `Grouping.feed`.
+Much like Java `stream.collect(Collectors.groupingBy(...))` and Kotlin `sequence.groupingBy`. See also `Grouping.fold`, `Grouping.feed`. But the collecting target is not `List` or `Collection` or `Map`. It is a lazy `Folder` defined by a lambda expression. In other words, you can still consider the elements of each group as a `Seq` and fold them as usual.
 ```java
-Map<Integer, List<Integer>> listMap = seq.groupBy(i -> i).toList();
-Map<Integer, Set<Integer>> setMap = seq.groupBy(i -> i).toSet();
-Map<Integer, Map<Integer, String>> mapMap = seq.groupBy(i -> i).toMap(i -> i, i -> i.toString());
+Map<Integer, List<Integer>> listMap = seq.groupBy(i -> i % 2, f -> f.toList()).eval();
+Map<Integer, Set<Integer>> setMap = seq.groupBy(i -> i % 2, f -> f.toSet()).eval();
+Map<Integer, Map<Integer, String>> mapMap = seq.groupBy(i -> i % 2, f -> f.toMapWith(i -> i.toString())).eval();
 ```
 #### join
 Same as Java `stream.collect(Collectors.joining(sep))` and Kotlin `sequence.joiningToString`, implemented by `feed`.
 ```java
-String s1 = seq.join(",");
-String s2 = seq.join(",", i -> "10" + i);
+String s1 = seq.join(",").eval();
+String s2 = seq.join(",", i -> "10" + i).eval();
 ```
 #### first
 Same as Java `stream.findFirst` and Kotlin `sequence.first`. See also `firstNot`, `firstNotNull`.
 ```java
-Integer first = seq.first();
-Integer firstOdd = seq.first(i -> i % 2 > 0);
+Integer first = seq.first().eval();
+Integer firstOdd = seq.first(i -> i % 2 > 0).eval();
 ```
 #### last
 Same as Kotlin `sequence.last`.
 ```java
-Integer last = seq.last();
+Integer last = seq.last().eval();
 ```
 #### any & anyNot & all & none
 Same as Java `stream.anyMatch`, `stream.allMatch`, `stream.noneMatch` and Kotlin `sequence.any`, `sequence.all`, `sequence.none`.
 ```java
-boolean anyOdd = seq.any(i -> i % 2 > 0);
-boolean anyEven = seq.anyNot(i -> i % 2 > 0);
-boolean allOdd = seq.all(i -> i % 2 > 0);
-boolean noneOdd = seq.none(i -> i % 2 > 0);
+boolean anyOdd = seq.any(i -> i % 2 > 0).eval();
+boolean anyEven = seq.anyNot(i -> i % 2 > 0).eval();
+boolean allOdd = seq.all(i -> i % 2 > 0).eval();
+boolean noneOdd = seq.none(i -> i % 2 > 0).eval();
 ```
 #### count & sum & average
 Same as Java `stream.count`, `stream.mapToInt(...).sum`, `stream.mapToInt(...).average` and Kotlin `sequence.count`, `sequence.sum`, `sequence.average`.
 ```java
-int count = seq.count();
-int countOdd = seq.count(i -> i % 2 > 0);
-int sum = seq.sum(i -> i);
-double avg = seq.average(i -> i);
-double weightedAvg = seq.average(i -> i, i -> i);
+int count = seq.count().eval();
+int countOdd = seq.count(i -> i % 2 > 0).eval();
+int sum = seq.sum(i -> i).eval();
+double avg = seq.average(i -> i).eval();
+double weightedAvg = seq.average(i -> i, i -> i).eval();
 ```
 #### max & min
 Same as Java `stream.max` and Kotlin `sequence.max`. See also `maxBy`, `maxWith`.
 ```java
-Integer max = seq.max(Integer::compareTo);
-Integer min = seq.maxBy(i -> -i);
-Pair<Integer, Integer> minWithValue = seq.maxWith(i -> -i);
+Integer max = seq.max(Integer::compareTo).eval();
+Integer min = seq.maxBy(i -> -i).eval();
+Pair<Integer, Integer> minWithValue = seq.maxWith(i -> -i).eval();
 ```
 #### cache
 Though `Seq` is always resuable unlike disposable Java `Stream`, it might be high-cost sometimes (usually from IO). You can cache it for once then use it anywhere else.
 ```java
-seq = seq.cache();
+seq = seq.cache().eval();
 ```
 #### parallel
 Same as Java `stream.parallel` to create a new parallelized `seq`, usually for multiple IO tasks.
 ```java
-seq = seq.parallel();
+seq = seq.parallel().eval();
 ```
 
 ## Usage
