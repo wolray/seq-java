@@ -195,20 +195,6 @@ public interface IntFoldable extends Foldable0<IntConsumer> {
         }
     }
 
-    abstract class MappingIntFolder<E, R> extends IntFolder<R> {
-        final IntFolder<E> folder;
-
-        public MappingIntFolder(IntFolder<E> folder) {
-            super(folder.foldable);
-            this.folder = folder;
-        }
-
-        @Override
-        public void accept(int t) {
-            folder.accept(t);
-        }
-    }
-
     abstract class IntFolder<E> implements IntConsumer, Supplier<E> {
         private final IntFoldable foldable;
 
@@ -222,7 +208,12 @@ public interface IntFoldable extends Foldable0<IntConsumer> {
         }
 
         public <R> IntFolder<R> map(Function<E, R> function) {
-            return new MappingIntFolder<E, R>(this) {
+            return new IntFolder<R>(foldable) {
+                @Override
+                public void accept(int t) {
+                    IntFolder.this.accept(t);
+                }
+
                 @Override
                 public R get() {
                     return function.apply(IntFolder.this.get());
@@ -231,14 +222,10 @@ public interface IntFoldable extends Foldable0<IntConsumer> {
         }
 
         public IntFolder<E> then(Consumer<E> consumer) {
-            return new MappingIntFolder<E, E>(this) {
-                @Override
-                public E get() {
-                    E res = folder.get();
-                    consumer.accept(res);
-                    return res;
-                }
-            };
+            return map(e -> {
+                consumer.accept(e);
+                return e;
+            });
         }
     }
 
@@ -253,7 +240,7 @@ public interface IntFoldable extends Foldable0<IntConsumer> {
     }
 
     interface BooleanIntToBoolean {
-        boolean apply(boolean b, int t);
+        boolean apply(boolean acc, int t);
     }
 
     interface ObjIntToObj<E> {

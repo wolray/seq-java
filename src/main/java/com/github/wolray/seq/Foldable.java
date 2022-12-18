@@ -388,20 +388,6 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         }
     }
 
-    abstract class MappingFolder<E, R, T> extends Folder<R, T> {
-        final Folder<E, T> folder;
-
-        public MappingFolder(Folder<E, T> folder) {
-            super(folder.foldable);
-            this.folder = folder;
-        }
-
-        @Override
-        public void accept(T t) {
-            folder.accept(t);
-        }
-    }
-
     abstract class Folder<E, T> implements Consumer<T>, Supplier<E> {
         private final Foldable<T> foldable;
 
@@ -415,7 +401,12 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         }
 
         public <R> Folder<R, T> map(Function<E, R> function) {
-            return new MappingFolder<E, R, T>(this) {
+            return new Folder<R, T>(foldable) {
+                @Override
+                public void accept(T t) {
+                    Folder.this.accept(t);
+                }
+
                 @Override
                 public R get() {
                     return function.apply(Folder.this.get());
@@ -424,14 +415,10 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         }
 
         public Folder<E, T> then(Consumer<E> consumer) {
-            return new MappingFolder<E, E, T>(this) {
-                @Override
-                public E get() {
-                    E res = folder.get();
-                    consumer.accept(res);
-                    return res;
-                }
-            };
+            return map(e -> {
+                consumer.accept(e);
+                return e;
+            });
         }
     }
 
@@ -446,18 +433,18 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
     }
 
     interface IntObjToInt<T> {
-        int apply(int i, T t);
+        int apply(int acc, T t);
     }
 
     interface DoubleObjToDouble<T> {
-        double apply(double i, T t);
+        double apply(double acc, T t);
     }
 
     interface LongObjToLong<T> {
-        long apply(long i, T t);
+        long apply(long acc, T t);
     }
 
     interface BooleanObjToBoolean<T> {
-        boolean apply(boolean b, T t);
+        boolean apply(boolean acc, T t);
     }
 }
