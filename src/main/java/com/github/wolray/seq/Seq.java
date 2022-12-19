@@ -290,7 +290,7 @@ public interface Seq<T> extends Foldable<T> {
 
     default <E> Seq<E> mapEachTwo(BiFunction<T, T, E> function) {
         Predicate<T> test = t -> true;
-        return mapSub(test, test, f -> f.firstLastTo(function)).filterNotNull();
+        return mapSub(test, test, f -> f.firstAndLast(function)).filterNotNull();
     }
 
     default <E> Seq<E> mapSub(T first, T last, ToFolder<T, E> function) {
