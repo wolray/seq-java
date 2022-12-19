@@ -114,6 +114,42 @@ public interface Seq<T> extends Foldable<T> {
         };
     }
 
+    default Seq<T> circle() {
+        return c -> {
+            while (true) {
+                eval(c);
+            }
+        };
+    }
+
+    default Seq<T> duplicateAll(int times) {
+        return c -> {
+            for (int i = 0; i < times; i++) {
+                eval(c);
+            }
+        };
+    }
+
+    default Seq<T> duplicateEach(int times) {
+        return c -> eval(t -> {
+            for (int i = 0; i < times; i++) {
+                c.accept(t);
+            }
+        });
+    }
+
+    default Seq<T> duplicateIf(int times, Predicate<T> predicate) {
+        return c -> eval(t -> {
+            if (predicate.test(t)) {
+                for (int i = 0; i < times; i++) {
+                    c.accept(t);
+                }
+            } else {
+                c.accept(t);
+            }
+        });
+    }
+
     default Seq<T> onEach(Consumer<T> consumer) {
         return c -> eval(consumer.andThen(c));
     }

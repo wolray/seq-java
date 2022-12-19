@@ -146,23 +146,6 @@ public class SeqTest {
     }
 
     @Test
-    public void testTree() {
-        Node n0 = new Node(0);
-        Node n1 = new Node(1);
-        Node n2 = new Node(2);
-        Node n3 = new Node(3);
-        Node n4 = new Node(4);
-        Node n5 = new Node(5);
-        n0.left = n1;
-        n0.right = n2;
-        n1.left = n3;
-        n1.right = n4;
-        n2.left = n5;
-        Seq<Node> seq = Seq.ofTree(n0, n -> Seq.of(n.left, n.right));
-        seq.map(n -> n.value).assertTo("0,1,3,4,2,5");
-    }
-
-    @Test
     public void testSubCollect() {
         Seq.of(
                 new Triple<>("john", 2015, "success"),
@@ -189,6 +172,32 @@ public class SeqTest {
         seq.mapToPair(true, (p1, p2) -> p1 + "+" + p2).assertTo("1+2,2+3,3+4,4+5,5+6,6+7");
 
         seq.reversePair().assertTo("2,1,4,3,6,5,7");
+    }
+
+    @Test
+    public void testDuplicate() {
+        Seq<Integer> seq = Seq.of(1, 2, 3, 4);
+        seq.duplicateIf(2, i -> i % 2 > 0).assertTo("1,1,2,3,3,4");
+        seq.duplicateEach(2).assertTo("1,1,2,2,3,3,4,4");
+        seq.duplicateAll(2).assertTo("1,2,3,4,1,2,3,4");
+        seq.circle().take(7).assertTo("1,2,3,4,1,2,3");
+    }
+
+    @Test
+    public void testTree() {
+        Node n0 = new Node(0);
+        Node n1 = new Node(1);
+        Node n2 = new Node(2);
+        Node n3 = new Node(3);
+        Node n4 = new Node(4);
+        Node n5 = new Node(5);
+        n0.left = n1;
+        n0.right = n2;
+        n1.left = n3;
+        n1.right = n4;
+        n2.left = n5;
+        Seq<Node> seq = Seq.ofTree(n0, n -> Seq.of(n.left, n.right));
+        seq.map(n -> n.value).assertTo("0,1,3,4,2,5");
     }
 
     static class Node {
