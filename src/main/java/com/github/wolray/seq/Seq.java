@@ -84,6 +84,20 @@ public interface Seq<T> extends Foldable<T> {
         return map(WithCe.mapper(function));
     }
 
+    default Seq<Pair<T, T>> mapToPair(boolean overlapping) {
+        return mapToPair(overlapping, Pair::new);
+    }
+
+    default <E> Seq<E> mapToPair(boolean overlapping, BiFunction<T, T, E> function) {
+        return c -> eval(fold((T)null, (last, t) -> {
+            if (last != null) {
+                c.accept(function.apply(last, t));
+                return overlapping ? t : null;
+            }
+            return t;
+        }));
+    }
+
     default Seq<T> onEach(Consumer<T> consumer) {
         return c -> eval(consumer.andThen(c));
     }
@@ -92,6 +106,18 @@ public interface Seq<T> extends Foldable<T> {
         return c -> eval(foldIndexed((i, t) -> {
             consumer.accept(i, t);
             c.accept(t);
+        }));
+    }
+
+    default Seq<T> onEachPair(boolean overlapping, BiConsumer<T, T> consumer) {
+        return c -> eval(fold((T)null, (last, t) -> {
+            if (last != null) {
+                consumer.accept(last, t);
+                c.accept(t);
+                return overlapping ? t : null;
+            }
+            c.accept(t);
+            return t;
         }));
     }
 
@@ -286,11 +312,6 @@ public interface Seq<T> extends Foldable<T> {
             c.accept(e);
             return e;
         }));
-    }
-
-    default <E> Seq<E> mapEachTwo(BiFunction<T, T, E> function) {
-        Predicate<T> test = t -> true;
-        return mapSub(test, test, f -> f.firstAndLast(function)).filterNotNull();
     }
 
     default <E> Seq<E> mapSub(T first, T last, ToFolder<T, E> function) {

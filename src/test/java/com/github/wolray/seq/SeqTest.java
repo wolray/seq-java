@@ -177,9 +177,15 @@ public class SeqTest {
     }
 
     @Test
-    public void testFirstAndLast() {
+    public void testPair() {
         Seq<Integer> seq = Seq.of(1, 2, 3, 4, 5, 6, 7);
-        seq.mapEachTwo((p1, p2) -> p1 + "+" + p2).assertTo("1+2,3+4,5+6");
+
+        seq.onEachPair(false, (p1, p2) -> System.out.print(p1 + "+" + p2 + " ")).assertTo("1,2,3,4,5,6,7");
+        System.out.println();
+        seq.onEachPair(true, (p1, p2) -> System.out.print(p1 + "+" + p2 + " ")).assertTo("1,2,3,4,5,6,7");
+
+        seq.mapToPair(false, (p1, p2) -> p1 + "+" + p2).assertTo("1+2,3+4,5+6");
+        seq.mapToPair(true, (p1, p2) -> p1 + "+" + p2).assertTo("1+2,2+3,3+4,4+5,5+6,6+7");
     }
 
     static class Node {
