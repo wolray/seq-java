@@ -170,10 +170,10 @@ public class SeqTest {
         seq.onFolder(f -> f.foldPair(true, (p1, p2) -> pairs2.add(p1 + "+" + p2))).assertTo("1,2,3,4,5,6,7");
         pairs2.assertTo("1+2,2+3,3+4,4+5,5+6,6+7");
 
-        Seq<String> seq1 = seq.mapToPair(false, (p1, p2) -> p1 + "+" + p2);
+        Seq<String> seq1 = seq.mapPair(false, (p1, p2) -> p1 + "+" + p2);
         seq1.assertTo("1+2,3+4,5+6");
         assert "5+6".equals(seq1.last().eval());
-        Seq<String> seq2 = seq.mapToPair(true, (p1, p2) -> p1 + "+" + p2);
+        Seq<String> seq2 = seq.mapPair(true, (p1, p2) -> p1 + "+" + p2);
         seq2.assertTo("1+2,2+3,3+4,4+5,5+6,6+7");
         assert "6+7".equals(seq2.last().eval());
 

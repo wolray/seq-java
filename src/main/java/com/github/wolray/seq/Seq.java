@@ -84,11 +84,11 @@ public interface Seq<T> extends Foldable<T> {
         return map(WithCe.mapper(function));
     }
 
-    default Seq<Pair<T, T>> mapToPair(boolean overlapping) {
-        return mapToPair(overlapping, Pair::new);
+    default Seq<Pair<T, T>> mapPair(boolean overlapping) {
+        return mapPair(overlapping, Pair::new);
     }
 
-    default <E> Seq<E> mapToPair(boolean overlapping, BiFunction<T, T, E> function) {
+    default <E> Seq<E> mapPair(boolean overlapping, BiFunction<T, T, E> function) {
         return c -> eval(foldPair(overlapping, (t1, t2) -> c.accept(function.apply(t1, t2))));
     }
 
@@ -212,7 +212,7 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default Seq<T> take(int n) {
-        return c -> eval(foldIndexed((i, t) -> {
+        return c -> tillStop(foldIndexed((i, t) -> {
             if (i < n) {
                 c.accept(t);
             } else {
@@ -248,23 +248,15 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default <E> Seq<T> takeWhile(Function<T, E> function, BiPredicate<E, E> testPrevCurr) {
-        return c -> {
-            IntPair<E> m = new IntPair<>(0, null);
-            tillStop(t -> {
-                E e = function.apply(t);
-                if (m.first > 0) {
-                    if (testPrevCurr.test(m.second, e)) {
-                        c.accept(t);
-                    } else {
-                        stop();
-                    }
-                } else {
-                    c.accept(t);
-                    m.first = 1;
-                }
-                m.second = e;
-            });
-        };
+        return c -> tillStop(fold((E)null, (last, t) -> {
+            E e = function.apply(t);
+            if (last == null || testPrevCurr.test(last, e)) {
+                c.accept(t);
+                return e;
+            } else {
+                return stop();
+            }
+        }));
     }
 
     default Seq<T> takeWhileEquals() {
@@ -408,16 +400,13 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default <E, R> Seq<R> zip(Iterable<E> iterable, BiFunction<T, E, R> function) {
-        return c -> {
-            Iterator<E> iterator = iterable.iterator();
-            tillStop(t -> {
-                if (iterator.hasNext()) {
-                    c.accept(function.apply(t, iterator.next()));
-                } else {
-                    stop();
-                }
-            });
-        };
+        return c -> tillStop(feed(iterable.iterator(), (itr, t) -> {
+            if (itr.hasNext()) {
+                c.accept(function.apply(t, itr.next()));
+            } else {
+                stop();
+            }
+        }));
     }
 
     default <B, C> Seq<Triple<T, B, C>> zip(Iterable<B> bs, Iterable<C> cs) {
@@ -435,14 +424,13 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default <E> void zipWith(Iterable<E> es, BiConsumer<T, E> consumer) {
-        Iterator<E> ei = es.iterator();
-        tillStop(t -> {
-            if (ei.hasNext()) {
-                consumer.accept(t, ei.next());
+        tillStop(feed(es.iterator(), (itr, t) -> {
+            if (itr.hasNext()) {
+                consumer.accept(t, itr.next());
             } else {
                 stop();
             }
-        });
+        }));
     }
 
     default Seq<T> cacheBy(Cache<T> cache) {
@@ -478,7 +466,8 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default void assertTo(String sep, String s) {
-        assert join(sep).eval().equals(s);
+        String result = join(sep).eval();
+        assert result.equals(s) : result;
     }
 
     default void printAll() {
