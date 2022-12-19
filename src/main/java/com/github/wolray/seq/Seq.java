@@ -98,6 +98,22 @@ public interface Seq<T> extends Foldable<T> {
         }));
     }
 
+    default Seq<T> reversePair() {
+        return c -> {
+            T last = fold((T)null, (prev, t) -> {
+                if (prev != null) {
+                    c.accept(t);
+                    c.accept(prev);
+                    return null;
+                }
+                return t;
+            }).eval();
+            if (last != null) {
+                c.accept(last);
+            }
+        };
+    }
+
     default Seq<T> onEach(Consumer<T> consumer) {
         return c -> eval(consumer.andThen(c));
     }
