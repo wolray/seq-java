@@ -89,13 +89,7 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default <E> Seq<E> mapToPair(boolean overlapping, BiFunction<T, T, E> function) {
-        return c -> eval(fold((T)null, (last, t) -> {
-            if (last != null) {
-                c.accept(function.apply(last, t));
-                return overlapping ? t : null;
-            }
-            return t;
-        }));
+        return c -> eval(foldPair(overlapping, (t1, t2) -> c.accept(function.apply(t1, t2))));
     }
 
     default Seq<T> reversePair() {
@@ -150,22 +144,12 @@ public interface Seq<T> extends Foldable<T> {
         });
     }
 
+    default <E> Seq<T> onFolder(ToFolder<T, E> toFolder) {
+        return c -> eval(toFolder.gen().andThen(c));
+    }
+
     default Seq<T> onEach(Consumer<T> consumer) {
         return c -> eval(consumer.andThen(c));
-    }
-
-    default Seq<T> onEachIndexed(IndexObjConsumer<T> consumer) {
-        return onEach(foldIndexed(consumer));
-    }
-
-    default Seq<T> onEachPair(boolean overlapping, BiConsumer<T, T> consumer) {
-        return onEach(fold((T)null, (last, t) -> {
-            if (last != null) {
-                consumer.accept(last, t);
-                return overlapping ? t : null;
-            }
-            return t;
-        }));
     }
 
     default Seq<T> onFirst(Consumer<T> consumer) {

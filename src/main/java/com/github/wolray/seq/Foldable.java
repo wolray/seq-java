@@ -112,6 +112,16 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         };
     }
 
+    default Folder<T, T> foldPair(boolean overlapping, BiConsumer<T, T> consumer) {
+        return fold(null, (last, t) -> {
+            if (last != null) {
+                consumer.accept(last, t);
+                return overlapping ? t : null;
+            }
+            return t;
+        });
+    }
+
     default Folder<Boolean, T> any(boolean ifFound, Predicate<T> predicate) {
         return find(!ifFound, predicate, t -> ifFound);
     }

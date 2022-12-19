@@ -163,13 +163,19 @@ public class SeqTest {
     public void testPair() {
         Seq<Integer> seq = Seq.of(1, 2, 3, 4, 5, 6, 7);
 
-        seq.onEachPair(false, (p1, p2) -> System.out.print(p1 + "+" + p2 + " ")).assertTo("1,2,3,4,5,6,7");
-        System.out.println();
-        seq.onEachPair(true, (p1, p2) -> System.out.print(p1 + "+" + p2 + " ")).assertTo("1,2,3,4,5,6,7");
-        System.out.println();
+        SinglyList<String> pairs1 = new SinglyList<>();
+        seq.onFolder(f -> f.foldPair(false, (p1, p2) -> pairs1.add(p1 + "+" + p2))).assertTo("1,2,3,4,5,6,7");
+        pairs1.assertTo("1+2,3+4,5+6");
+        SinglyList<String> pairs2 = new SinglyList<>();
+        seq.onFolder(f -> f.foldPair(true, (p1, p2) -> pairs2.add(p1 + "+" + p2))).assertTo("1,2,3,4,5,6,7");
+        pairs2.assertTo("1+2,2+3,3+4,4+5,5+6,6+7");
 
-        seq.mapToPair(false, (p1, p2) -> p1 + "+" + p2).assertTo("1+2,3+4,5+6");
-        seq.mapToPair(true, (p1, p2) -> p1 + "+" + p2).assertTo("1+2,2+3,3+4,4+5,5+6,6+7");
+        Seq<String> seq1 = seq.mapToPair(false, (p1, p2) -> p1 + "+" + p2);
+        seq1.assertTo("1+2,3+4,5+6");
+        assert "5+6".equals(seq1.last().eval());
+        Seq<String> seq2 = seq.mapToPair(true, (p1, p2) -> p1 + "+" + p2);
+        seq2.assertTo("1+2,2+3,3+4,4+5,5+6,6+7");
+        assert "6+7".equals(seq2.last().eval());
 
         seq.reversePair().assertTo("2,1,4,3,6,5,7");
     }
