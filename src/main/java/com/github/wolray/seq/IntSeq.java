@@ -97,10 +97,7 @@ public interface IntSeq extends IntFoldable {
     }
 
     default IntSeq onEachIndexed(IndexIntConsumer consumer) {
-        return c -> eval(foldIndexed((i, t) -> {
-            consumer.accept(i, t);
-            c.accept(t);
-        }));
+        return onEach(foldIndexed(consumer));
     }
 
     default IntSeq filter(IntPredicate predicate) {

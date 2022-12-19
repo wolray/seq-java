@@ -155,20 +155,15 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default Seq<T> onEachIndexed(IndexObjConsumer<T> consumer) {
-        return c -> eval(foldIndexed((i, t) -> {
-            consumer.accept(i, t);
-            c.accept(t);
-        }));
+        return onEach(foldIndexed(consumer));
     }
 
     default Seq<T> onEachPair(boolean overlapping, BiConsumer<T, T> consumer) {
-        return c -> eval(fold((T)null, (last, t) -> {
+        return onEach(fold((T)null, (last, t) -> {
             if (last != null) {
                 consumer.accept(last, t);
-                c.accept(t);
                 return overlapping ? t : null;
             }
-            c.accept(t);
             return t;
         }));
     }
@@ -189,10 +184,15 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default Seq<T> onLast(Consumer<T> consumer) {
-        return c -> eval(fold(null, (m, t) -> {
-            c.accept(t);
-            return t;
-        }));
+        return c -> {
+            T last = fold((T)null, (m, t) -> {
+                c.accept(t);
+                return t;
+            }).eval();
+            if (last != null) {
+                consumer.accept(last);
+            }
+        };
     }
 
     default Seq<T> filter(Predicate<T> predicate) {
@@ -469,12 +469,12 @@ public interface Seq<T> extends Foldable<T> {
         if (cache.exists()) {
             return cache.read();
         } else {
-            BatchList<T> list = new BatchList<>(batchSize);
-            eval(list::add);
-            if (list.isNotEmpty()) {
-                cache.write(list);
-            }
-            return list;
+            return toBatchList(batchSize)
+                .then(ls -> {
+                    if (ls.isNotEmpty()) {
+                        cache.write(ls);
+                    }
+                }).eval();
         }
     }
 
