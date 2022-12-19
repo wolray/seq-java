@@ -169,6 +169,12 @@ public class SeqTest {
         System.out.println(map);
     }
 
+    @Test
+    public void testFirstAndLast() {
+        Seq<Integer> seq = Seq.of(1, 2, 3, 4, 5, 6, 7);
+        seq.mapEachTwo((p1, p2) -> p1 + "+" + p2).assertTo("1+2,3+4,5+6");
+    }
+
     static class Node {
         final int value;
         Node left;

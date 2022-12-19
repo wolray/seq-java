@@ -352,6 +352,18 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         return feed(des, (res, t) -> res.put(t, vFunction.apply(t)));
     }
 
+    default <E> Folder<E, T> firstAndLast(BiFunction<T, T, E> function) {
+        return feed(new Pair<>((T)null, (T)null), (p, t) -> {
+            if (p.first != null) {
+                p.second = t;
+            } else {
+                p.first = t;
+            }
+        }).map(p -> p.first != null && p.second != null
+            ? function.apply(p.first, p.second)
+            : null);
+    }
+
     default <K, V> Folder<SeqMap<K, V>, T> groupBy(Function<T, K> kFunction, ToFolder<T, V> toFolder) {
         return groupBy(new HashMap<>(), kFunction, toFolder);
     }
