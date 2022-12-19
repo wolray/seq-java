@@ -170,17 +170,6 @@ public interface IntFoldable extends Foldable0<IntConsumer> {
         return fold(null, (f, t) -> f == null || f > t ? t : f);
     }
 
-    default IntFolder<int[]> toArray() {
-        return new AccIntFolder<int[]>(this, new int[count().eval()]) {
-            int i = 0;
-
-            @Override
-            public void accept(int t) {
-                acc[i++] = t;
-            }
-        };
-    }
-
     abstract class AccIntFolder<E> extends IntFolder<E> {
         protected E acc;
 

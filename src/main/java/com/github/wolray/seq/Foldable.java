@@ -252,15 +252,44 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
     }
 
     @SuppressWarnings("unchecked")
-    default <E> Folder<E[], T> toArrayBy(IntFunction<E[]> generator) {
-        return new AccFolder<E[], T>(this, generator.apply(count().eval())) {
-            int i = 0;
+    default Folder<T[], T> toObjArray() {
+        return toBatchList().map(ls -> {
+            Object[] a = new Object[ls.size()];
+            ls.foldIndexed((i, t) -> a[i] = t).eval();
+            return (T[])a;
+        });
+    }
 
-            @Override
-            public void accept(T t) {
-                acc[i++] = (E)t;
-            }
-        };
+    default Folder<int[], T> toIntArray(ToIntFunction<T> function) {
+        return toBatchList().map(ls -> {
+            int[] a = new int[ls.size()];
+            ls.foldIndexed((i, t) -> a[i] = function.applyAsInt(t)).eval();
+            return a;
+        });
+    }
+
+    default Folder<double[], T> toDoubleArray(ToDoubleFunction<T> function) {
+        return toBatchList().map(ls -> {
+            double[] a = new double[ls.size()];
+            ls.foldIndexed((i, t) -> a[i] = function.applyAsDouble(t)).eval();
+            return a;
+        });
+    }
+
+    default Folder<long[], T> toLongArray(ToLongFunction<T> function) {
+        return toBatchList().map(ls -> {
+            long[] a = new long[ls.size()];
+            ls.foldIndexed((i, t) -> a[i] = function.applyAsLong(t)).eval();
+            return a;
+        });
+    }
+
+    default Folder<boolean[], T> toBooleanArray(Predicate<T> function) {
+        return toBatchList().map(ls -> {
+            boolean[] a = new boolean[ls.size()];
+            ls.foldIndexed((i, t) -> a[i] = function.test(t)).eval();
+            return a;
+        });
     }
 
     default Folder<SeqList<T>, T> sort() {

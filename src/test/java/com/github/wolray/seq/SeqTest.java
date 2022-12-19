@@ -139,6 +139,13 @@ public class SeqTest {
     }
 
     @Test
+    public void testToArray() {
+        Seq<Integer> seq = Seq.of(1, 1, 2, 3, 4, 6);
+        Seq.of(seq.toObjArray().eval()).assertTo("1,1,2,3,4,6");
+        IntSeq.of(seq.toIntArray(i -> i).eval()).boxed().assertTo("1,1,2,3,4,6");
+    }
+
+    @Test
     public void testTree() {
         Node n0 = new Node(0);
         Node n1 = new Node(1);
