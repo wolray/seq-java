@@ -190,6 +190,22 @@ public class SeqTest {
     }
 
     @Test
+    public void testSeqMap() {
+        Seq.of(1, 2, 3, 4)
+            .toMapWith(i -> i).eval()
+            .replaceValue(Object::toString)
+            .assertTo("1=1,2=2,3=3,4=4");
+        Seq.of(1, 2, 3, 4)
+            .toMapWith(i -> i).eval()
+            .replaceValue(i -> i / 10.0)
+            .assertTo("1=0.1,2=0.2,3=0.3,4=0.4");
+        Seq.of(1, 2, 3, 4)
+            .toMapWith(i -> i).eval()
+            .replaceValue((k, i) -> k + i / 10.0)
+            .assertTo("1=1.1,2=2.2,3=3.3,4=4.4");
+    }
+
+    @Test
     public void testTree() {
         Node n0 = new Node(0);
         Node n1 = new Node(1);
