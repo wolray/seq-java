@@ -178,8 +178,6 @@ public class SeqTest {
         Seq<String> seq2 = seq.mapPair(true, (p1, p2) -> p1 + "+" + p2);
         seq2.assertTo("1+2,2+3,3+4,4+5,5+6,6+7");
         assert "6+7".equals(seq2.last().eval());
-
-        seq.reversePair().assertTo("2,1,4,3,6,5,7");
     }
 
     @Test
