@@ -7,11 +7,10 @@ This project provides a new streaming API, called `Seq`. It looks very much like
 Unlike most streaming API implementations, `Seq` is not based on `Iterator`. It only requires a single `Consumer -> void` interface. While `Iterator` needs both `next` and `hasNext`, which makes them hard to adapt for some procedural languages. Here is the definition of `Seq`:
 ```java
 public interface Seq<T> {
-    void eval(Consumer<T> consumer);
+    void supply(Consumer<T> consumer);
 }
 ```
-This `eval` is the only abstract interface of `Seq`, and is naturally implemented (and inspired) by `Iterable`'s `forEach`. It is so simple and low-level that it can be implemented to nearly any language, as long as the language
-supports closures.
+This `supply` is the only abstract interface of `Seq`, and is naturally implemented (and inspired) by `Iterable`'s `forEach`, meaning "supplying elements to the consumer". It is so simple and low-level that it can be implemented to nearly any language, as long as the language supports closures.
 
 ## Features
 
