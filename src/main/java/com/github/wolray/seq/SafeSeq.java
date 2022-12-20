@@ -17,7 +17,7 @@ public abstract class SafeSeq<T> implements Seq<T> {
     public static <T> SafeSeq<T> of(WithCe.Seq<T> seq) {
         return new SafeSeq<T>() {
             @Override
-            public void eval(Consumer<T> consumer) {
+            public void supply(Consumer<T> consumer) {
                 try {
                     seq.accept(consumer);
                 } catch (Exception e) {
@@ -36,7 +36,7 @@ public abstract class SafeSeq<T> implements Seq<T> {
     }
 
     public <E> Seq<E> map(int skip, Function<T, E> function) {
-        return c -> eval(foldIndexed((i, t) -> {
+        return c -> supply(foldIndexed((i, t) -> {
             if (i > skip || i == skip && !isProcessed(function, t)) {
                 c.accept(function.apply(t));
             }

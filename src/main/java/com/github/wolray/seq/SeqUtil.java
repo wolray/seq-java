@@ -32,7 +32,7 @@ public class SeqUtil {
     public static <N> void scanTree(Consumer<N> c, N node, Function<N, Seq<N>> sub) {
         if (node != null) {
             c.accept(node);
-            sub.apply(node).eval(n -> scanTree(c, n, sub));
+            sub.apply(node).supply(n -> scanTree(c, n, sub));
         }
     }
 

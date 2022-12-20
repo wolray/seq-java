@@ -14,7 +14,7 @@ public class SinglyList<T> implements AdderList<T>, Queue<T> {
     private transient int size = 0;
 
     @Override
-    public void eval(Consumer<T> consumer) {
+    public void supply(Consumer<T> consumer) {
         for (Node<T> node = head; node != null; node = node.next) {
             consumer.accept(node.t);
         }
@@ -22,7 +22,7 @@ public class SinglyList<T> implements AdderList<T>, Queue<T> {
 
     @Override
     public String toString() {
-        return toStr();
+        return join();
     }
 
     @Override

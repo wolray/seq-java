@@ -24,7 +24,7 @@ public class SeqSet<T> extends BackedSeq<T, Set<T>> implements Set<T> {
     }
 
     @Override
-    public void eval(Consumer<T> consumer) {
+    public void supply(Consumer<T> consumer) {
         backer.forEach(consumer);
     }
 

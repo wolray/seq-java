@@ -34,6 +34,10 @@ public abstract class IntFolder<E> implements IntConsumer, Supplier<E> {
         };
     }
 
+    public IntFolder<String> format(String format) {
+        return map(it -> String.format(format, it));
+    }
+
     public IntFolder<E> then(Consumer<E> consumer) {
         return map(e -> {
             consumer.accept(e);

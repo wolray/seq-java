@@ -72,7 +72,7 @@ public class SeqMap<K, V> extends BackedSeq<Map.Entry<K, V>, Set<Map.Entry<K, V>
     @SuppressWarnings("unchecked")
     public <E> SeqMap<K, E> replaceValue(Function<V, E> function) {
         SeqMap<K, Object> map = (SeqMap<K, Object>)this;
-        map.eval(e -> e.setValue(function.apply((V)e.getValue())));
+        map.supply(e -> e.setValue(function.apply((V)e.getValue())));
         return (SeqMap<K, E>)map;
     }
 

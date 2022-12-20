@@ -247,7 +247,7 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
 
     default <V extends Comparable<V>> Pair<T, V> minWith(Function<T, V> function) {
         Pair<T, V> pair = new Pair<>(null, null);
-        eval(t -> {
+        supply(t -> {
             V v = function.apply(t);
             if (pair.first == null || pair.second.compareTo(v) > 0) {
                 pair.first = t;
@@ -324,6 +324,10 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
 
     default <E extends Comparable<E>> Folder<SeqList<T>, T> sortDescBy(Function<T, E> function) {
         return sortOn(Comparator.comparing(function).reversed());
+    }
+
+    default Folder<SeqList<T>, T> reverse() {
+        return toList().then(it -> Collections.reverse(it.backer));
     }
 
     default int sizeOrDefault() {

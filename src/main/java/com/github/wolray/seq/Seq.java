@@ -14,11 +14,13 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     static <T> Seq<T> of(Iterable<T> iterable) {
-        return iterable instanceof Collection ? new BackedSeq<>((Collection<T>)iterable) : iterable::forEach;
+        return iterable instanceof Collection
+            ? new BackedSeq<>((Collection<T>)iterable)
+            : iterable::forEach;
     }
 
-    static <K, V> Seq<Map.Entry<K, V>> of(Map<K, V> map) {
-        return of(map.entrySet());
+    static <K, V> SeqMap<K, V> of(Map<K, V> map) {
+        return SeqMap.of(map);
     }
 
     static <N> Seq<N> ofTree(N node, Function<N, Seq<N>> sub) {
@@ -64,15 +66,15 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default IntSeq mapToInt(ToIntFunction<T> function) {
-        return c -> eval(t -> c.accept(function.applyAsInt(t)));
+        return c -> supply(t -> c.accept(function.applyAsInt(t)));
     }
 
     default <E> Seq<E> map(Function<T, E> function) {
-        return c -> eval(t -> c.accept(function.apply(t)));
+        return c -> supply(t -> c.accept(function.apply(t)));
     }
 
     default <E> Seq<E> mapNotNull(Function<T, E> function) {
-        return c -> eval(t -> {
+        return c -> supply(t -> {
             E e = function.apply(t);
             if (e != null) {
                 c.accept(e);
@@ -89,7 +91,7 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default <E> Seq<E> mapPair(boolean overlapping, BiFunction<T, T, E> function) {
-        return c -> eval(foldPair(overlapping, (t1, t2) -> c.accept(function.apply(t1, t2))));
+        return c -> supply(foldPair(overlapping, (t1, t2) -> c.accept(function.apply(t1, t2))));
     }
 
     default Seq<T> reversePair() {
@@ -111,7 +113,7 @@ public interface Seq<T> extends Foldable<T> {
     default Seq<T> circle() {
         return c -> {
             while (true) {
-                eval(c);
+                supply(c);
             }
         };
     }
@@ -119,13 +121,13 @@ public interface Seq<T> extends Foldable<T> {
     default Seq<T> duplicateAll(int times) {
         return c -> {
             for (int i = 0; i < times; i++) {
-                eval(c);
+                supply(c);
             }
         };
     }
 
     default Seq<T> duplicateEach(int times) {
-        return c -> eval(t -> {
+        return c -> supply(t -> {
             for (int i = 0; i < times; i++) {
                 c.accept(t);
             }
@@ -133,7 +135,7 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default Seq<T> duplicateIf(int times, Predicate<T> predicate) {
-        return c -> eval(t -> {
+        return c -> supply(t -> {
             if (predicate.test(t)) {
                 for (int i = 0; i < times; i++) {
                     c.accept(t);
@@ -145,11 +147,11 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default <E> Seq<T> onFolder(ToFolder<T, E> toFolder) {
-        return c -> eval(toFolder.gen().andThen(c));
+        return c -> supply(toFolder.gen().andThen(c));
     }
 
     default Seq<T> onEach(Consumer<T> consumer) {
-        return c -> eval(consumer.andThen(c));
+        return c -> supply(consumer.andThen(c));
     }
 
     default Seq<T> onFirst(Consumer<T> consumer) {
@@ -157,7 +159,7 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default Seq<T> onFirst(int n, Consumer<T> consumer) {
-        return c -> eval(foldIndexed((i, t) -> {
+        return c -> supply(foldIndexed((i, t) -> {
             if (i >= n) {
                 c.accept(t);
             } else {
@@ -180,7 +182,7 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default Seq<T> filter(Predicate<T> predicate) {
-        return c -> eval(t -> {
+        return c -> supply(t -> {
             if (predicate.test(t)) {
                 c.accept(t);
             }
@@ -230,7 +232,7 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default Seq<T> forFirst(int n, Consumer<T> consumer) {
-        return c -> eval(foldIndexed((i, t) -> (i >= n ? c : consumer).accept(t)));
+        return c -> supply(foldIndexed((i, t) -> (i >= n ? c : consumer).accept(t)));
     }
 
     default Seq<T> takeWhile(Predicate<T> predicate) {
@@ -268,7 +270,7 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default Seq<T> dropWhile(Predicate<T> predicate) {
-        return c -> eval(foldBoolean(false, (b, t) -> {
+        return c -> supply(foldBoolean(false, (b, t) -> {
             if (b) {
                 c.accept(t);
             } else if (!predicate.test(t)) {
@@ -296,7 +298,7 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default Seq<IntPair<T>> withIndex(int start) {
-        return c -> eval(foldIndexed(start, (i, t) -> c.accept(new IntPair<>(i, t))));
+        return c -> supply(foldIndexed(start, (i, t) -> c.accept(new IntPair<>(i, t))));
     }
 
     default Seq<T> distinct() {
@@ -306,7 +308,7 @@ public interface Seq<T> extends Foldable<T> {
     default <E> Seq<T> distinctBy(Function<T, E> function) {
         return c -> {
             Set<E> set = new HashSet<>();
-            eval(t -> {
+            supply(t -> {
                 if (set.add(function.apply(t))) {
                     c.accept(t);
                 }
@@ -331,11 +333,11 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default <E> Seq<E> flatMap(Function<T, Seq<E>> function) {
-        return c -> eval(t -> function.apply(t).eval(c));
+        return c -> supply(t -> function.apply(t).supply(c));
     }
 
     default <E> Seq<E> runningFold(E init, BiFunction<E, T, E> function) {
-        return c -> eval(fold(init, (e, t) -> {
+        return c -> supply(fold(init, (e, t) -> {
             e = function.apply(e, t);
             c.accept(e);
             return e;
@@ -351,7 +353,7 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default <E> Seq<E> mapSub(Predicate<T> first, Predicate<T> last, ToFolder<T, E> toFolder) {
-        return c -> eval(fold((Folder<E, T>)null, (f, t) -> {
+        return c -> supply(fold((Folder<E, T>)null, (f, t) -> {
             if (f == null && first.test(t)) {
                 f = toFolder.gen();
                 f.accept(t);
@@ -369,7 +371,7 @@ public interface Seq<T> extends Foldable<T> {
     @SuppressWarnings("unchecked")
     default Seq<T> append(T t, T... more) {
         return c -> {
-            eval(c);
+            supply(c);
             c.accept(t);
             for (T x : more) {
                 c.accept(x);
@@ -379,15 +381,15 @@ public interface Seq<T> extends Foldable<T> {
 
     default Seq<T> appendAll(Iterable<T> iterable) {
         return c -> {
-            eval(c);
+            supply(c);
             iterable.forEach(c);
         };
     }
 
     default Seq<T> appendWith(Seq<T> seq) {
         return c -> {
-            eval(c);
-            seq.eval(c);
+            supply(c);
+            seq.supply(c);
         };
     }
 
@@ -457,7 +459,7 @@ public interface Seq<T> extends Foldable<T> {
     default ParallelSeq<T> parallel() {
         return this instanceof ParallelSeq ? (ParallelSeq<T>)this : c -> {
             ForkJoinPool pool = new ForkJoinPool();
-            eval(t -> pool.submit(() -> c.accept(t)));
+            supply(t -> pool.submit(() -> c.accept(t)));
         };
     }
 
@@ -476,7 +478,7 @@ public interface Seq<T> extends Foldable<T> {
 
     default void printAll(String sep) {
         if ("\n".equals(sep)) {
-            eval(System.out::println);
+            supply(System.out::println);
         } else {
             System.out.println(join(sep).eval());
         }

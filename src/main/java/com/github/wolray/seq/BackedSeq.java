@@ -14,7 +14,7 @@ public class BackedSeq<T, C extends Collection<T>> implements Seq<T> {
     }
 
     @Override
-    public void eval(Consumer<T> consumer) {
+    public void supply(Consumer<T> consumer) {
         backer.forEach(consumer);
     }
 

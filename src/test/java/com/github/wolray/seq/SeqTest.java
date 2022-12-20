@@ -110,10 +110,12 @@ public class SeqTest {
     @Test
     public void testQueue() {
         SinglyList<Integer> list = new SinglyList<>();
+        assert list.toString().equals("[]");
         list.offer(2);
         list.offer(3);
         list.offer(4);
         list.offer(5);
+        assert list.toString().equals("[2, 3, 4, 5]");
         list.assertTo("2,3,4,5");
         assert list.size() == 4;
         Integer head = list.remove();

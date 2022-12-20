@@ -12,10 +12,10 @@ public interface SeqReader<S, T> {
     Seq<T> toSeq(S source) throws Exception;
 
     default SafeSeq<T> read(S source) {
-        return SafeSeq.of(c -> toSeq(source).eval(c));
+        return SafeSeq.of(c -> toSeq(source).supply(c));
     }
 
-    interface Is<T> extends SeqReader<Text, T> {
+    interface Is<T> extends SeqReader<InputSource, T> {
         default SafeSeq<T> read(URL url) {
             return read(url::openStream);
         }
@@ -39,13 +39,13 @@ public interface SeqReader<S, T> {
         }
     }
 
-    interface Text extends WithCe.Supplier<InputStream> {}
+    interface InputSource extends WithCe.Supplier<InputStream> {}
 
-    class Str implements Is<String> {
-        static final Str INSTANCE = new Str() {};
+    final class Text implements Is<String> {
+        static final Text INSTANCE = new Text();
 
         @Override
-        public Seq<String> toSeq(Text source) {
+        public Seq<String> toSeq(InputSource source) {
             return c -> {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(source.get()))) {
                     String s;
@@ -59,7 +59,7 @@ public interface SeqReader<S, T> {
         }
     }
 
-    static Is<String> str() {
-        return Str.INSTANCE;
+    static Is<String> text() {
+        return Text.INSTANCE;
     }
 }

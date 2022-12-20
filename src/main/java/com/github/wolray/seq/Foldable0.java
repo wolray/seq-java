@@ -4,11 +4,11 @@ package com.github.wolray.seq;
  * @author wolray
  */
 public interface Foldable0<C> {
-    void eval(C consumer);
+    void supply(C consumer);
 
     default void tillStop(C consumer) {
         try {
-            eval(consumer);
+            supply(consumer);
         } catch (StopException ignore) {}
     }
 

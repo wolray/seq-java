@@ -81,19 +81,19 @@ public interface IntSeq extends IntFoldable {
     }
 
     default Seq<Integer> boxed() {
-        return c -> eval(c::accept);
+        return c -> supply(c::accept);
     }
 
     default <E> Seq<E> mapToObj(IntFunction<E> function) {
-        return c -> eval(t -> c.accept(function.apply(t)));
+        return c -> supply(t -> c.accept(function.apply(t)));
     }
 
     default IntSeq map(IntUnaryOperator function) {
-        return c -> eval(t -> c.accept(function.applyAsInt(t)));
+        return c -> supply(t -> c.accept(function.applyAsInt(t)));
     }
 
     default IntSeq onEach(IntConsumer consumer) {
-        return c -> eval(consumer.andThen(c));
+        return c -> supply(consumer.andThen(c));
     }
 
     default IntSeq onEachIndexed(IndexIntConsumer consumer) {
@@ -101,7 +101,7 @@ public interface IntSeq extends IntFoldable {
     }
 
     default IntSeq filter(IntPredicate predicate) {
-        return c -> eval(t -> {
+        return c -> supply(t -> {
             if (predicate.test(t)) {
                 c.accept(t);
             }
@@ -113,7 +113,7 @@ public interface IntSeq extends IntFoldable {
     }
 
     default IntSeq take(int n) {
-        return c -> eval(foldIndexed((i, t) -> {
+        return c -> supply(foldIndexed((i, t) -> {
             if (i < n) {
                 c.accept(t);
             } else {
@@ -131,7 +131,7 @@ public interface IntSeq extends IntFoldable {
     }
 
     default IntSeq forFirst(int n, IntConsumer consumer) {
-        return c -> eval(foldIndexed((i, t) -> (i >= n ? c : consumer).accept(t)));
+        return c -> supply(foldIndexed((i, t) -> (i >= n ? c : consumer).accept(t)));
     }
 
     default IntSeq takeWhile(IntPredicate predicate) {
@@ -145,7 +145,7 @@ public interface IntSeq extends IntFoldable {
     }
 
     default IntSeq dropWhile(IntPredicate predicate) {
-        return c -> eval(foldBool(false, (b, t) -> {
+        return c -> supply(foldBool(false, (b, t) -> {
             if (b) {
                 c.accept(t);
             } else if (!predicate.test(t)) {
@@ -159,7 +159,7 @@ public interface IntSeq extends IntFoldable {
     default IntSeq distinct() {
         return c -> {
             Set<Integer> set = new HashSet<>();
-            eval(t -> {
+            supply(t -> {
                 if (set.add(t)) {
                     c.accept(t);
                 }
@@ -168,11 +168,11 @@ public interface IntSeq extends IntFoldable {
     }
 
     default IntSeq flatMap(IntFunction<IntSeq> function) {
-        return c -> eval(t -> function.apply(t).eval(c));
+        return c -> supply(t -> function.apply(t).supply(c));
     }
 
     default IntSeq runningFold(int init, IntBinaryOperator function) {
-        return c -> eval(fold(init, (acc, t) -> {
+        return c -> supply(fold(init, (acc, t) -> {
             acc = function.applyAsInt(acc, t);
             c.accept(acc);
             return acc;
@@ -181,7 +181,7 @@ public interface IntSeq extends IntFoldable {
 
     default IntSeq append(int t, int... more) {
         return c -> {
-            eval(c);
+            supply(c);
             c.accept(t);
             for (int x : more) {
                 c.accept(x);
@@ -191,8 +191,8 @@ public interface IntSeq extends IntFoldable {
 
     default IntSeq appendWith(IntSeq seq) {
         return c -> {
-            eval(c);
-            seq.eval(c);
+            supply(c);
+            seq.supply(c);
         };
     }
 }

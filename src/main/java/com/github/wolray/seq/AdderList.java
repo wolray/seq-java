@@ -9,11 +9,11 @@ import java.util.Objects;
  * @author wolray
  */
 public interface AdderList<E> extends Seq<E>, List<E> {
-    default String toStr() {
+    default String join() {
         if (isEmpty()) {
             return "[]";
         }
-        return '[' + join(", ", e -> e == this ? "(this)" : String.valueOf(e)).eval() + ']';
+        return join(", ", e -> e == this ? "(this)" : String.valueOf(e)).format("[%s]").eval();
     }
 
     @Override

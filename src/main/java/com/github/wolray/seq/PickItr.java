@@ -32,7 +32,7 @@ public abstract class PickItr<T> implements Seq<T>, Iterator<T> {
     public abstract T pick();
 
     @Override
-    public void eval(Consumer<T> consumer) {
+    public void supply(Consumer<T> consumer) {
         forEachRemaining(consumer);
     }
 

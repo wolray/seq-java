@@ -23,13 +23,13 @@ public class BatchList<T> implements AdderList<T> {
     }
 
     @Override
-    public void eval(Consumer<T> consumer) {
+    public void supply(Consumer<T> consumer) {
         list.forEach(ls -> ls.forEach(consumer));
     }
 
     @Override
     public String toString() {
-        return toStr();
+        return join();
     }
 
     @Override

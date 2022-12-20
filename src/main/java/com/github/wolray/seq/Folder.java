@@ -33,6 +33,10 @@ public abstract class Folder<E, T> implements Consumer<T>, Supplier<E> {
         };
     }
 
+    public Folder<String, T> format(String format) {
+        return map(it -> String.format(format, it));
+    }
+
     public Folder<E, T> then(Consumer<E> consumer) {
         return map(e -> {
             consumer.accept(e);
