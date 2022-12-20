@@ -80,12 +80,38 @@ As a streaming API, `Seq` provides standard lazy mapping functions for chaining 
 Seq<Integer> seq = Seq.of(1, 1, 2, 3, 4);
 ```
 #### map
-Same as Java `stream.map` and Kotlin `sequence.map` .
+Same as Java `stream.map` and Kotlin `sequence.map`. See also `mapNotNull`.
 ```java
 seq = seq.map(i -> i + 10); // 11, 11, 12, 13, 14
 ```
+#### mapPair
+Map to paired sequence.
+```java
+Seq<Pair<Integer, Integer>> adjacent = seq.mapPair(false); // (1,1), (2,3)
+Seq<Pair<Integer, Integer>> overlapping = seq.mapPair(true); // (1,1), (1,2), (2,3), (3,4)
+```
+#### circle
+Returns an endless sequence like a circle.
+```java
+seq = seq.circle(); // 1, 1, 2, 3, 4, 1, 1, 2, 3, 4, ...
+```
+#### duplicateAll
+Duplicate the sequence for `n` times.
+```java
+seq = seq.duplicateAll(2); // 1, 1, 2, 3, 4, 1, 1, 2, 3, 4
+```
+#### duplicateEach
+Duplicate each element for `n` times.
+```java
+seq = seq.duplicateEach(2); // 1, 1, 1, 1, 2, 2, 3, 3, 4, 4
+```
+#### duplicateIf
+Duplicate each element for `n` times if tested as true.
+```java
+seq = seq.duplicateIf(3, i -> i % 2 == 0); // 1, 1, 2, 2, 2, 3, 4, 4, 4
+```
 #### filter
-Same as Java `stream.filter` and Kotlin `sequence.filter`.
+Same as Java `stream.filter` and Kotlin `sequence.filter`. See also `filterNot`, `filterNotNull`, `filterIn`, `filterNotIn`.
 ```java
 seq = seq.filter(i -> i % 2 > 0); // 1, 1, 3
 ```
@@ -100,7 +126,7 @@ Same as Java `stream.skip` and Kotlin `sequence.drop`.
 seq = seq.drop(3); // 3, 4
 ```
 #### takeWhile
-Same as Java `stream.takeWhile` and Kotlin `sequence.takeWhile`.
+Same as Java `stream.takeWhile` and Kotlin `sequence.takeWhile`. See also `takeWhileEquals`.
 ```java
 seq = seq.takeWhile(i -> i < 3); // 1, 1, 2
 ```
@@ -150,11 +176,6 @@ Same as Java `stream.peek` and Kotlin `sequence.onEach`.
 ```java
 seq = seq.onEach(System.out::println); // same as old but also println each element
 ```
-#### onEachIndexed
-Same as Kotlin `sequence.onEachIndexed`.
-```java
-seq = seq.onEachIndexed((index, i) -> System.out.println(index + " " + i)); // same as old but also println each element
-```
 #### onFirst
 ```java
 seq = seq.onFirst(System.out::println); // same as old but also (lazily) println the first element
@@ -163,42 +184,39 @@ seq = seq.onFirst(System.out::println); // same as old but also (lazily) println
 ```java
 seq = seq.onLast(System.out::println); // same as old but also (lazily) println the last element
 ```
-#### sort & sortOn & sortBy & sortWith
-Same as Java `stream.sort` and Kotlin `sequence.sort` series.
+#### cache
+Though `Seq` is always resuable unlike disposable Java `Stream`, it might be high-cost sometimes (usually from IO). You can cache it for once then use it anywhere else.
 ```java
-Seq<Integer> s1 = seq.sort(); // 1, 1, 2, 3, 4
-Seq<Integer> s2 = seq.sortOn(Integer::compareTo); // 1, 1, 2, 3, 4
-Seq<Integer> s3 = seq.sortDesc(); // 4, 3, 2, 1, 1
-Seq<Integer> s4 = seq.sortDesc(Integer::compareTo); // 4, 3, 2, 1, 1
-Seq<Integer> s5 = seq.sortBy(i -> 10 - i); // 4, 3, 2, 1, 1
-Seq<Integer> s6 = seq.sortDescBy(i -> 10 - i); // 1, 1, 2, 3, 4
-Seq<Pair<Integer, Integer>> s7 = seq.sortWith(i -> 10 - i); // (4,6), (3,7), (2,8), (1,9), (1,9)
-Seq<Pair<Integer, Integer>> s8 = seq.sortDescWith(i -> 10 - i); // (1,9), (1,9), (2,8), (3,7), (4,6)
+seq = seq.cache().eval();
 ```
-
+#### parallel
+Same as Java `stream.parallel` to create a new parallelized `seq`, usually for multiple IO tasks.
+```java
+seq = seq.parallel().eval();
+```
 ### Terminal operations
 Like any other streaming API, a `seq` is not evaluated until calling terminal operations. However, there is an extra abstraction layer between those operations and the real outputs. It is called `Folder`.
 
-With `Folder`, all termination operators returns a `Folder` instance, which is still lazy. The final output is only computed when the `eval()` method is called.
+With `Folder`, most termination operators returns a `Folder` instance, which is still lazy. The final output is only computed when the `eval()` method is called.
 
 
-#### eval
+#### supply
 Same as Java `stream.forEach` and Kotlin `sequence.forEach`.
 ```java
-seq.eval(System.out::println);
-```
-#### evalIndexed
-Same as Kotlin `sequence.forEachIndexed`.
-```java
-seq.evalIndexed((index, i) -> System.out.println(index + " " + i));
+seq.supply(System.out::println);
 ```
 #### fold
 Same as Kotlin `sequence.fold` and a little like Java `stream.reduce`.
 ```java
 Integer sum = seq.fold(0, (acc, i) -> acc + i).eval(); // sum by folding each element with initial 0
 ```
+#### foldIndexed
+Same as Kotlin `sequence.forEachIndexed`.
+```java
+seq.foldIndexed((index, i) -> System.out.println(index + " " + i)).eval();
+```
 #### feed
-Giving a destination then feed all elements to it. Works like `fold` but requires a `BiConsumer` rather than `BiFunction`. This is the most frequently used method for terminal operations, and really useful for kinds of unexpected corner cases.
+Giving a destination then feed all elements to it. Works like `fold` but requires a `BiConsumer` rather than `BiFunction`.
 ```java
 List<Integer> list = seq.feed(new ArrayList<>(), List::add).eval(); // collect to list
 ```
@@ -276,15 +294,15 @@ Integer max = seq.max(Integer::compareTo).eval();
 Integer min = seq.maxBy(i -> -i).eval();
 Pair<Integer, Integer> minWithValue = seq.maxWith(i -> -i).eval();
 ```
-#### cache
-Though `Seq` is always resuable unlike disposable Java `Stream`, it might be high-cost sometimes (usually from IO). You can cache it for once then use it anywhere else.
+#### sort & sortOn & sortBy
+Same as Java `stream.sort` and Kotlin `sequence.sort` series.
 ```java
-seq = seq.cache().eval();
-```
-#### parallel
-Same as Java `stream.parallel` to create a new parallelized `seq`, usually for multiple IO tasks.
-```java
-seq = seq.parallel().eval();
+Seq<Integer> s1 = seq.sort().eval(); // 1, 1, 2, 3, 4
+Seq<Integer> s2 = seq.sortOn(Integer::compareTo).eval(); // 1, 1, 2, 3, 4
+Seq<Integer> s3 = seq.sortDesc().eval(); // 4, 3, 2, 1, 1
+Seq<Integer> s4 = seq.sortDesc(Integer::compareTo).eval(); // 4, 3, 2, 1, 1
+Seq<Integer> s5 = seq.sortBy(i -> 10 - i).eval(); // 4, 3, 2, 1, 1
+Seq<Integer> s6 = seq.sortDescBy(i -> 10 - i).eval(); // 1, 1, 2, 3, 4
 ```
 
 ## Usage
@@ -302,6 +320,6 @@ Then add the dependency.
 <dependency>
     <groupId>com.github.wolray</groupId>
     <artifactId>seq-java</artifactId>
-    <version>1.0.3</version>
+    <version>1.2.0</version>
 </dependency>
 ```
