@@ -94,22 +94,6 @@ public interface Seq<T> extends Foldable<T> {
         return c -> supply(foldPair(overlapping, (t1, t2) -> c.accept(function.apply(t1, t2))));
     }
 
-    default Seq<T> reversePair() {
-        return c -> {
-            T last = fold((T)null, (prev, t) -> {
-                if (prev != null) {
-                    c.accept(t);
-                    c.accept(prev);
-                    return null;
-                }
-                return t;
-            }).eval();
-            if (last != null) {
-                c.accept(last);
-            }
-        };
-    }
-
     default Seq<T> circle() {
         return c -> {
             while (true) {
