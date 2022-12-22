@@ -155,7 +155,7 @@ public interface Seq<T> extends Foldable<T> {
 
     default Seq<T> onLast(Consumer<T> consumer) {
         return c -> {
-            T last = fold((T)null, (m, t) -> {
+            T last = fold((T)null, (prev, t) -> {
                 c.accept(t);
                 return t;
             }).eval();
@@ -290,14 +290,11 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default <E> Seq<T> distinctBy(Function<T, E> function) {
-        return c -> {
-            Set<E> set = new HashSet<>();
-            supply(t -> {
-                if (set.add(function.apply(t))) {
-                    c.accept(t);
-                }
-            });
-        };
+        return c -> supply(feed(new HashSet<>(), (set, t) -> {
+            if (set.add(function.apply(t))) {
+                c.accept(t);
+            }
+        }));
     }
 
     default Seq<SeqList<T>> chunked(int size) {
