@@ -187,6 +187,12 @@ public class SeqTest {
         seq.duplicateEach(2).assertTo("1,1,2,2,3,3,4,4");
         seq.duplicateAll(2).assertTo("1,2,3,4,1,2,3,4");
         seq.circle().take(7).assertTo("1,2,3,4,1,2,3");
+
+        IntSeq is = IntSeq.of(1, 2, 3, 4);
+        is.duplicateIf(2, i -> i % 2 > 0).boxed().assertTo("1,1,2,3,3,4");
+        is.duplicateEach(2).boxed().assertTo("1,1,2,2,3,3,4,4");
+        is.duplicateAll(2).boxed().assertTo("1,2,3,4,1,2,3,4");
+        is.circle().take(7).boxed().assertTo("1,2,3,4,1,2,3");
     }
 
     @Test

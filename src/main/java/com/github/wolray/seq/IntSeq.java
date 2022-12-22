@@ -92,6 +92,42 @@ public interface IntSeq extends IntFoldable {
         return c -> supply(t -> c.accept(function.applyAsInt(t)));
     }
 
+    default IntSeq circle() {
+        return c -> {
+            while (true) {
+                supply(c);
+            }
+        };
+    }
+
+    default IntSeq duplicateAll(int times) {
+        return c -> {
+            for (int i = 0; i < times; i++) {
+                supply(c);
+            }
+        };
+    }
+
+    default IntSeq duplicateEach(int times) {
+        return c -> supply(t -> {
+            for (int i = 0; i < times; i++) {
+                c.accept(t);
+            }
+        });
+    }
+
+    default IntSeq duplicateIf(int times, IntPredicate predicate) {
+        return c -> supply(t -> {
+            if (predicate.test(t)) {
+                for (int i = 0; i < times; i++) {
+                    c.accept(t);
+                }
+            } else {
+                c.accept(t);
+            }
+        });
+    }
+
     default IntSeq onEach(IntConsumer consumer) {
         return c -> supply(consumer.andThen(c));
     }
