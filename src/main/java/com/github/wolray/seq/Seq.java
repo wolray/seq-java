@@ -257,6 +257,7 @@ public interface Seq<T> extends Foldable<T> {
         return c -> supply(foldBoolean(false, (b, t) -> {
             if (b) {
                 c.accept(t);
+                return true;
             } else if (!predicate.test(t)) {
                 c.accept(t);
                 return true;

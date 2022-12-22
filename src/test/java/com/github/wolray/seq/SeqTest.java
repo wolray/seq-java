@@ -12,18 +12,18 @@ import java.util.function.Predicate;
 public class SeqTest {
     @Test
     public void testResult() {
-        Seq<Integer> seq1 = Seq.of(0, 2, 4, 1, 6, 3, 5, 7, 10, 11, 12);
+        Seq<Integer> seq1 = Seq.of(0, 2, 4, 1, 6, 3, 8, 10, 11, 12);
         Seq<Integer> filtered1 = seq1.take(5);
         filtered1.assertTo("0,2,4,1,6");
         filtered1.assertTo("0,2,4,1,6");
 
-        IntSeq seq2 = IntSeq.of(0, 2, 4, 1, 6, 3, 5, 7, 10, 11, 12);
+        IntSeq seq2 = IntSeq.of(0, 2, 4, 1, 6, 3, 8, 10, 11, 12);
         IntSeq filtered2 = seq2.take(5);
         filtered2.boxed().assertTo("0,2,4,1,6");
         filtered2.boxed().assertTo("0,2,4,1,6");
 
         Predicate<Integer> predicate = i -> (i & 1) == 0;
-        seq1.dropWhile(predicate).assertTo("1,6,3,5,7,10,11,12");
+        seq1.dropWhile(predicate).assertTo("1,6,3,8,10,11,12");
         seq1.takeWhile(predicate).assertTo("0,2,4");
         seq1.take(5).assertTo("0,2,4,1,6");
         seq1.take(5).drop(2).assertTo("4,1,6");
