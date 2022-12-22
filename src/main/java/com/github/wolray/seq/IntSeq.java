@@ -184,6 +184,7 @@ public interface IntSeq extends IntFoldable {
         return c -> supply(foldBool(false, (b, t) -> {
             if (b) {
                 c.accept(t);
+                return true;
             } else if (!predicate.test(t)) {
                 c.accept(t);
                 return true;

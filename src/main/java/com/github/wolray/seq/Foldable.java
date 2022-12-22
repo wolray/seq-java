@@ -261,12 +261,11 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         return minWith(function).first;
     }
 
-    @SuppressWarnings("unchecked")
-    default Folder<T[], T> toObjArray() {
+    default Folder<T[], T> toObjArray(IntFunction<T[]> initializer) {
         return toBatchList().map(ls -> {
-            Object[] a = new Object[ls.size()];
+            T[] a = initializer.apply(ls.size());
             ls.foldIndexed((i, t) -> a[i] = t).eval();
-            return (T[])a;
+            return a;
         });
     }
 

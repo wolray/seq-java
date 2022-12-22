@@ -24,6 +24,7 @@ public class SeqTest {
 
         Predicate<Integer> predicate = i -> (i & 1) == 0;
         seq1.dropWhile(predicate).assertTo("1,6,3,8,10,11,12");
+        seq2.dropWhile(i -> (i & 1) == 0).boxed().assertTo("1,6,3,8,10,11,12");
         seq1.takeWhile(predicate).assertTo("0,2,4");
         seq1.take(5).assertTo("0,2,4,1,6");
         seq1.take(5).drop(2).assertTo("4,1,6");
@@ -143,7 +144,7 @@ public class SeqTest {
     @Test
     public void testToArray() {
         Seq<Integer> seq = Seq.of(1, 1, 2, 3, 4, 6);
-        Seq.of(seq.toObjArray().eval()).assertTo("1,1,2,3,4,6");
+        Seq.of(seq.toObjArray(Integer[]::new).eval()).assertTo("1,1,2,3,4,6");
         IntSeq.of(seq.toIntArray(i -> i).eval()).boxed().assertTo("1,1,2,3,4,6");
     }
 
