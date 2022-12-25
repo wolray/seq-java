@@ -4,9 +4,9 @@ package com.github.wolray.seq;
  * @author wolray
  */
 public class Triple<T, A, B> {
-    public final T first;
-    public final A second;
-    public final B third;
+    public T first;
+    public A second;
+    public B third;
 
     public Triple(T first, A second, B third) {
         this.first = first;
