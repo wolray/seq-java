@@ -182,10 +182,7 @@ public interface IntSeq extends IntFoldable {
 
     default IntSeq dropWhile(IntPredicate predicate) {
         return c -> supply(foldBool(false, (b, t) -> {
-            if (b) {
-                c.accept(t);
-                return true;
-            } else if (!predicate.test(t)) {
+            if (b || !predicate.test(t)) {
                 c.accept(t);
                 return true;
             }

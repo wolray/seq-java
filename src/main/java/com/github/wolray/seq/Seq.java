@@ -255,10 +255,7 @@ public interface Seq<T> extends Foldable<T> {
 
     default Seq<T> dropWhile(Predicate<T> predicate) {
         return c -> supply(foldBoolean(false, (b, t) -> {
-            if (b) {
-                c.accept(t);
-                return true;
-            } else if (!predicate.test(t)) {
+            if (b || !predicate.test(t)) {
                 c.accept(t);
                 return true;
             }

@@ -245,20 +245,18 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         return fold(null, (f, t) -> f == null || comparator.compare(f, t) > 0 ? t : f);
     }
 
-    default <V extends Comparable<V>> Pair<T, V> minWith(Function<T, V> function) {
-        Pair<T, V> pair = new Pair<>(null, null);
-        supply(t -> {
+    default <V extends Comparable<V>> Folder<Pair<T, V>, T> minWith(Function<T, V> function) {
+        return feed(new Pair<>(null, null), (p, t) -> {
             V v = function.apply(t);
-            if (pair.first == null || pair.second.compareTo(v) > 0) {
-                pair.first = t;
-                pair.second = v;
+            if (p.first == null || p.second.compareTo(v) > 0) {
+                p.first = t;
+                p.second = v;
             }
         });
-        return pair;
     }
 
-    default <V extends Comparable<V>> T minBy(Function<T, V> function) {
-        return minWith(function).first;
+    default <V extends Comparable<V>> Folder<T, T> minBy(Function<T, V> function) {
+        return minWith(function).map(p -> p.first);
     }
 
     default Folder<T[], T> toObjArray(IntFunction<T[]> initializer) {
