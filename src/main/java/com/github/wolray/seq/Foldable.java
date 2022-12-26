@@ -199,17 +199,21 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
     }
 
     default Folder<Double, T> average(ToDoubleFunction<T> function, ToDoubleFunction<T> weightFunction) {
-        return feed(new double[]{0, 0}, (a, t) -> {
-            if (weightFunction != null) {
+        BiConsumer<double[], T> biConsumer;
+        if (weightFunction != null) {
+            biConsumer = (a, t) -> {
                 double v = function.applyAsDouble(t);
                 double w = weightFunction.applyAsDouble(t);
                 a[0] += v * w;
                 a[1] += w;
-            } else {
+            };
+        } else {
+            biConsumer = (a, t) -> {
                 a[0] += function.applyAsDouble(t);
                 a[1] += 1;
-            }
-        }).map(a -> a[1] != 0 ? a[0] / a[1] : 0);
+            };
+        }
+        return feed(new double[]{0, 0}, biConsumer).map(a -> a[1] != 0 ? a[0] / a[1] : 0);
     }
 
     default Folder<T, T> max(Comparator<T> comparator) {
@@ -401,9 +405,10 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
 
     default <K, V> Folder<SeqMap<K, V>, T> groupBy(Map<K, Supplier<V>> map,
         Function<T, K> kFunction, ToFolder<T, V> toFolder) {
+        Function<K, Supplier<V>> mappingFunction = k -> toFolder.gen();
         return feed(map, (m, t) -> {
             K k = kFunction.apply(t);
-            Supplier<V> folder = map.computeIfAbsent(k, it -> toFolder.gen());
+            Supplier<V> folder = m.computeIfAbsent(k, mappingFunction);
             ((Folder<V, T>)folder).accept(t);
         }).map(m -> new SeqMap<>(m).replaceValue(Supplier::get));
     }
