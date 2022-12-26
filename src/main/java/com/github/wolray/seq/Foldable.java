@@ -199,28 +199,17 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
     }
 
     default Folder<Double, T> average(ToDoubleFunction<T> function, ToDoubleFunction<T> weightFunction) {
-        return new Folder<Double, T>(this) {
-            double sum;
-            double weight;
-
-            @Override
-            public Double get() {
-                return weight != 0 ? sum / weight : 0;
+        return feed(new double[]{0, 0}, (a, t) -> {
+            if (weightFunction != null) {
+                double v = function.applyAsDouble(t);
+                double w = weightFunction.applyAsDouble(t);
+                a[0] += v * w;
+                a[1] += w;
+            } else {
+                a[0] += function.applyAsDouble(t);
+                a[1] += 1;
             }
-
-            @Override
-            public void accept(T t) {
-                if (weightFunction != null) {
-                    double v = function.applyAsDouble(t);
-                    double w = weightFunction.applyAsDouble(t);
-                    sum += v * w;
-                    weight += w;
-                } else {
-                    sum += function.applyAsDouble(t);
-                    weight += 1;
-                }
-            }
-        };
+        }).map(a -> a[1] != 0 ? a[0] / a[1] : 0);
     }
 
     default Folder<T, T> max(Comparator<T> comparator) {
@@ -300,27 +289,27 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
     }
 
     default Folder<SeqList<T>, T> sort() {
-        return sortOn(null);
+        return sorted(null);
     }
 
-    default Folder<SeqList<T>, T> sortOn(Comparator<T> comparator) {
+    default Folder<SeqList<T>, T> sorted(Comparator<T> comparator) {
         return toList().then(it -> it.backer.sort(comparator));
     }
 
     default Folder<SeqList<T>, T> sortDesc() {
-        return sortOn(Collections.reverseOrder());
+        return sorted(Collections.reverseOrder());
     }
 
     default Folder<SeqList<T>, T> sortDesc(Comparator<T> comparator) {
-        return sortOn(comparator.reversed());
+        return sorted(comparator.reversed());
     }
 
     default <E extends Comparable<E>> Folder<SeqList<T>, T> sortBy(Function<T, E> function) {
-        return sortOn(Comparator.comparing(function));
+        return sorted(Comparator.comparing(function));
     }
 
     default <E extends Comparable<E>> Folder<SeqList<T>, T> sortDescBy(Function<T, E> function) {
-        return sortOn(Comparator.comparing(function).reversed());
+        return sorted(Comparator.comparing(function).reversed());
     }
 
     default Folder<SeqList<T>, T> reverse() {
@@ -397,16 +386,13 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         return feed(des, (res, t) -> res.put(t, vFunction.apply(t)));
     }
 
-    default <E> Folder<E, T> firstAndLast(BiFunction<T, T, E> function) {
-        return feed(new Pair<>((T)null, (T)null), (p, t) -> {
-            if (p.first != null) {
-                p.second = t;
-            } else {
+    default Folder<Pair<T, T>, T> firstAndLast() {
+        return feed(new Pair<>(null, null), (p, t) -> {
+            if (p.first == null) {
                 p.first = t;
             }
-        }).map(p -> p.first != null && p.second != null
-            ? function.apply(p.first, p.second)
-            : null);
+            p.second = t;
+        });
     }
 
     default <K, V> Folder<SeqMap<K, V>, T> groupBy(Function<T, K> kFunction, ToFolder<T, V> toFolder) {
