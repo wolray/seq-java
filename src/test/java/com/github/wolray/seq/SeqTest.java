@@ -4,6 +4,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
@@ -51,12 +52,26 @@ public class SeqTest {
     }
 
     @Test
+    public void partitionTest() {
+        Seq<Integer> seq = Seq.of(0, 2, 4, 1, 6, 3, 5, 7, 10, 11, 12);
+        Pair<BatchList<Integer>, BatchList<Integer>> pair1 = seq.partition(i -> (i & 1) > 0, Foldable::toBatchList).eval();
+        pair1.first.assertTo("1,3,5,7,11");
+        pair1.second.assertTo("0,2,4,6,10,12");
+
+        Pair<BatchList<Integer>, BatchList<Integer>> pair2 = seq.partition(i -> (i & 1) > 0).eval();
+        pair2.first.assertTo("1,3,5,7,11");
+        pair2.second.assertTo("0,2,4,6,10,12");
+    }
+
+    @Test
     public void testChunked() {
         List<Integer> list = Arrays.asList(0, 2, 4, 1, 6, 3, 5, 7, 10, 11, 12);
-        Seq.of(list).chunked(2).map(s -> s.join(",").eval()).assertTo("|", "0,2|4,1|6,3|5,7|10,11|12");
-        Seq.of(list).chunked(3).map(s -> s.join(",").eval()).assertTo("|", "0,2,4|1,6,3|5,7,10|11,12");
-        Seq.of(list).chunked(4).map(s -> s.join(",").eval()).assertTo("|", "0,2,4,1|6,3,5,7|10,11,12");
-        Seq.of(list).chunked(5).map(s -> s.join(",").eval()).assertTo("|", "0,2,4,1,6|3,5,7,10,11|12");
+        Function<SeqList<Integer>, String> function = s -> s.join(",").eval();
+        Seq.of(list).chunked(2).map(function).assertTo("|", "0,2|4,1|6,3|5,7|10,11|12");
+        Seq.of(list).chunked(3).map(function).assertTo("|", "0,2,4|1,6,3|5,7,10|11,12");
+        Seq.of(list).chunked(4).map(function).assertTo("|", "0,2,4,1|6,3,5,7|10,11,12");
+        Seq.of(list).chunked(5).map(function).assertTo("|", "0,2,4,1,6|3,5,7,10,11|12");
+        Seq.of(1,2,3,4).chunked(2).map(function).assertTo("|", "1,2|3,4");
     }
 
     @Test

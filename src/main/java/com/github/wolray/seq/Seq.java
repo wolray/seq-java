@@ -296,18 +296,23 @@ public interface Seq<T> extends Foldable<T> {
     }
 
     default Seq<SeqList<T>> chunked(int size) {
+        return chunked(size, Foldable::toList);
+    }
+
+    default <E> Seq<E> chunked(int size, ToFolder<T, E> toFolder) {
         return c -> {
-            SeqList<T> last = fold(new SeqList<>(new ArrayList<T>(size)), (ls, t) -> {
-                if (ls.size() >= size) {
-                    c.accept(ls);
-                    ls = new SeqList<>(new ArrayList<>(size));
+            IntPair<Folder<E, T>> last = feed(new IntPair<>(0, (Folder<E, T>)null), (p, t) -> {
+                if (p.second == null) {
+                    p.second = toFolder.gen();
+                } else if (p.first >= size) {
+                    c.accept(p.second.get());
+                    p.first = 0;
+                    p.second = toFolder.gen();
                 }
-                ls.add(t);
-                return ls;
+                p.first++;
+                p.second.accept(t);
             }).eval();
-            if (last.isNotEmpty()) {
-                c.accept(last);
-            }
+            c.accept(last.second.get());
         };
     }
 

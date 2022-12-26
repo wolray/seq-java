@@ -364,8 +364,13 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
     }
 
     default Folder<Pair<BatchList<T>, BatchList<T>>, T> partition(Predicate<T> predicate) {
-        return feed(new Pair<>(new BatchList<>(), new BatchList<>()), (p, t) ->
-            (predicate.test(t) ? p.first : p.second).add(t));
+        return partition(predicate, Foldable::toBatchList);
+    }
+
+    default <E> Folder<Pair<E, E>, T> partition(Predicate<T> predicate, ToFolder<T, E> toFolder) {
+        return feed(new Pair<>(toFolder.gen(), toFolder.gen()), (p, t) ->
+            (predicate.test(t) ? p.first : p.second).accept(t))
+            .map(p -> new Pair<>(p.first.get(), p.second.get()));
     }
 
     default <K, V> Folder<SeqMap<K, V>, T> toMap(Function<T, K> kFunction, Function<T, V> vFunction) {
