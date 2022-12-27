@@ -2,7 +2,6 @@ package com.github.wolray.seq;
 
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.function.Consumer;
 
 /**
  * @author wolray
@@ -10,11 +9,6 @@ import java.util.function.Consumer;
 public class SeqCollection<T, C extends Collection<T>> extends BackedSeq<T, C> implements Collection<T> {
     public SeqCollection(C backer) {
         super(backer);
-    }
-
-    @Override
-    public void supply(Consumer<T> consumer) {
-        backer.forEach(consumer);
     }
 
     @Override

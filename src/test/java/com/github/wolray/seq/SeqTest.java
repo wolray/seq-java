@@ -173,7 +173,7 @@ public class SeqTest {
             new Triple<>("john", 2009, "success"),
             new Triple<>("chris", 2007, "fail"),
             new Triple<>("john", 2005, "fail"));
-        seq.groupBy(t -> t.first, Foldable.mapping(t -> t.second, Foldable::sort)).eval()
+        seq.groupBy(t -> t.first, Foldable.mapping(t -> t.second, Foldable::sorted)).eval()
             .assertTo("\t", "chris=[2007, 2013]\tjohn=[2005, 2009, 2012, 2013, 2015]");
     }
 

@@ -292,27 +292,27 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         });
     }
 
-    default Folder<SeqList<T>, T> sort() {
-        return sorted(null);
+    default Folder<SeqList<T>, T> sorted() {
+        return sorted((Comparator<T>)null);
+    }
+
+    default Folder<SeqList<T>, T> sortedDesc() {
+        return sorted(Collections.reverseOrder());
     }
 
     default Folder<SeqList<T>, T> sorted(Comparator<T> comparator) {
         return toList().then(it -> it.backer.sort(comparator));
     }
 
-    default Folder<SeqList<T>, T> sortDesc() {
-        return sorted(Collections.reverseOrder());
-    }
-
-    default Folder<SeqList<T>, T> sortDesc(Comparator<T> comparator) {
+    default Folder<SeqList<T>, T> sortedDesc(Comparator<T> comparator) {
         return sorted(comparator.reversed());
     }
 
-    default <E extends Comparable<E>> Folder<SeqList<T>, T> sortBy(Function<T, E> function) {
+    default <E extends Comparable<E>> Folder<SeqList<T>, T> sorted(Function<T, E> function) {
         return sorted(Comparator.comparing(function));
     }
 
-    default <E extends Comparable<E>> Folder<SeqList<T>, T> sortDescBy(Function<T, E> function) {
+    default <E extends Comparable<E>> Folder<SeqList<T>, T> sortedDesc(Function<T, E> function) {
         return sorted(Comparator.comparing(function).reversed());
     }
 
