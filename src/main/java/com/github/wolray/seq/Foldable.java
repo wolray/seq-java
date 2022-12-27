@@ -360,7 +360,7 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         return partition(predicate, Foldable::toBatchList);
     }
 
-    default <E> Folder<Pair<E, E>, T> partition(Predicate<T> predicate, ToFolder<T, E> toFolder) {
+    default <E> Folder<Pair<E, E>, T> partition(Predicate<T> predicate, ToFolder<E, T> toFolder) {
         return feed(new Pair<>(toFolder.gen(), toFolder.gen()), (p, t) ->
             (predicate.test(t) ? p.first : p.second).accept(t))
             .map(p -> new Pair<>(p.first.get(), p.second.get()));
@@ -399,12 +399,12 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         });
     }
 
-    default <K, V> Folder<SeqMap<K, V>, T> groupBy(Function<T, K> kFunction, ToFolder<T, V> toFolder) {
+    default <K, V> Folder<SeqMap<K, V>, T> groupBy(Function<T, K> kFunction, ToFolder<V, T> toFolder) {
         return groupBy(new HashMap<>(), kFunction, toFolder);
     }
 
     default <K, V> Folder<SeqMap<K, V>, T> groupBy(Map<K, Supplier<V>> map,
-        Function<T, K> kFunction, ToFolder<T, V> toFolder) {
+        Function<T, K> kFunction, ToFolder<V, T> toFolder) {
         Function<K, Supplier<V>> mappingFunction = k -> toFolder.gen();
         return feed(map, (m, t) -> {
             K k = kFunction.apply(t);

@@ -184,12 +184,6 @@ public interface IntFoldable extends Foldable0<IntConsumer> {
         }
     }
 
-    interface ToFolder<T> extends Function<IntFoldable, IntFolder<T>> {
-        default IntFolder<T> gen() {
-            return apply(IntSeq.empty);
-        }
-    }
-
     interface IndexIntConsumer {
         void accept(int i, int t);
     }

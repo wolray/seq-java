@@ -130,7 +130,7 @@ public interface Seq<T> extends Foldable<T> {
         });
     }
 
-    default <E> Seq<T> onFolder(ToFolder<T, E> toFolder) {
+    default <E> Seq<T> onFolder(ToFolder<E, T> toFolder) {
         return c -> supply(toFolder.gen().andThen(c));
     }
 
@@ -299,7 +299,7 @@ public interface Seq<T> extends Foldable<T> {
         return chunked(size, Foldable::toList);
     }
 
-    default <E> Seq<E> chunked(int size, ToFolder<T, E> toFolder) {
+    default <E> Seq<E> chunked(int size, ToFolder<E, T> toFolder) {
         return c -> {
             IntPair<Folder<E, T>> last = feed(new IntPair<>(0, (Folder<E, T>)null), (p, t) -> {
                 if (p.second == null) {
@@ -328,15 +328,15 @@ public interface Seq<T> extends Foldable<T> {
         }));
     }
 
-    default <E> Seq<E> mapSub(T first, T last, ToFolder<T, E> function) {
+    default <E> Seq<E> mapSub(T first, T last, ToFolder<E, T> function) {
         return mapSub(first::equals, last::equals, function);
     }
 
-    default <E, V> Seq<E> mapSub(V first, V last, Function<T, V> function, ToFolder<T, E> toFolder) {
+    default <E, V> Seq<E> mapSub(V first, V last, Function<T, V> function, ToFolder<E, T> toFolder) {
         return mapSub(t -> first.equals(function.apply(t)), t -> last.equals(function.apply(t)), toFolder);
     }
 
-    default <E> Seq<E> mapSub(Predicate<T> first, Predicate<T> last, ToFolder<T, E> toFolder) {
+    default <E> Seq<E> mapSub(Predicate<T> first, Predicate<T> last, ToFolder<E, T> toFolder) {
         return c -> supply(fold((Folder<E, T>)null, (f, t) -> {
             if (f == null && first.test(t)) {
                 f = toFolder.gen();
