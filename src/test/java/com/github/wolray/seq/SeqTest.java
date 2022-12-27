@@ -71,7 +71,7 @@ public class SeqTest {
         Seq.of(list).chunked(3).map(function).assertTo("|", "0,2,4|1,6,3|5,7,10|11,12");
         Seq.of(list).chunked(4).map(function).assertTo("|", "0,2,4,1|6,3,5,7|10,11,12");
         Seq.of(list).chunked(5).map(function).assertTo("|", "0,2,4,1,6|3,5,7,10,11|12");
-        Seq.of(1,2,3,4).chunked(2).map(function).assertTo("|", "1,2|3,4");
+        Seq.of(1, 2, 3, 4).chunked(2).map(function).assertTo("|", "1,2|3,4");
     }
 
     @Test
@@ -165,16 +165,16 @@ public class SeqTest {
 
     @Test
     public void testSubCollect() {
-        Seq.of(
-                new Triple<>("john", 2015, "success"),
-                new Triple<>("john", 2013, "fail"),
-                new Triple<>("chris", 2013, "success"),
-                new Triple<>("john", 2012, "fail"),
-                new Triple<>("john", 2009, "success"),
-                new Triple<>("chris", 2007, "fail"),
-                new Triple<>("john", 2005, "fail"))
-            .groupBy(r -> r.first, Foldable::count).eval()
-            .assertTo("chris=2,john=5");
+        Seq<Triple<String, Integer, String>> seq = Seq.of(
+            new Triple<>("john", 2015, "success"),
+            new Triple<>("john", 2013, "fail"),
+            new Triple<>("chris", 2013, "success"),
+            new Triple<>("john", 2012, "fail"),
+            new Triple<>("john", 2009, "success"),
+            new Triple<>("chris", 2007, "fail"),
+            new Triple<>("john", 2005, "fail"));
+        seq.groupBy(t -> t.first, Foldable.mapping(t -> t.second, Foldable::sort)).eval()
+            .assertTo("\t", "chris=[2007, 2013]\tjohn=[2005, 2009, 2012, 2013, 2015]");
     }
 
     @Test

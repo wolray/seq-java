@@ -436,7 +436,23 @@ public interface Foldable<T> extends Foldable0<Consumer<T>> {
         }
     }
 
-    interface ToFolder<T, E> extends Function<Foldable<T>, Folder<E, T>> {
+    static <T, R, E> ToFolder<E, T> mapping(Function<T, R> function, ToFolder<E, R> toFolder) {
+        return f -> new Folder<E, T>(Seq.empty()) {
+            Folder<E, R> folder = toFolder.gen();
+
+            @Override
+            public void accept(T r) {
+                folder.accept(function.apply(r));
+            }
+
+            @Override
+            public E get() {
+                return folder.get();
+            }
+        };
+    }
+
+    interface ToFolder<E, T> extends Function<Foldable<T>, Folder<E, T>> {
         default Folder<E, T> gen() {
             return apply(Seq.empty());
         }
