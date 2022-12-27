@@ -16,6 +16,16 @@ public class SeqMap<K, V> extends BackedSeq<Map.Entry<K, V>, Set<Map.Entry<K, V>
         this.map = map;
     }
 
+    @Override
+    public SeqSet<K> keySet() {
+        return new SeqSet<>(map.keySet());
+    }
+
+    @Override
+    public Values<V> values() {
+        return new Values<>(map.values());
+    }
+
     public static <K, V> SeqMap<K, V> of(Map<K, V> map) {
         return map instanceof SeqMap ? (SeqMap<K, V>)map : new SeqMap<>(map);
     }
@@ -42,15 +52,6 @@ public class SeqMap<K, V> extends BackedSeq<Map.Entry<K, V>, Set<Map.Entry<K, V>
             return new ConcurrentHashMap<>(map.size());
         }
         return new HashMap<>(map.size());
-    }
-
-    @Override
-    public SeqSet<K> keySet() {
-        return new SeqSet<>(map.keySet());
-    }
-
-    public Seq<V> valueSeq() {
-        return map.values()::forEach;
     }
 
     public <E> SeqMap<E, V> mapByKey(BiFunction<K, V, E> function) {
@@ -134,12 +135,13 @@ public class SeqMap<K, V> extends BackedSeq<Map.Entry<K, V>, Set<Map.Entry<K, V>
     }
 
     @Override
-    public Collection<V> values() {
-        return map.values();
-    }
-
-    @Override
     public Set<Entry<K, V>> entrySet() {
         return map.entrySet();
+    }
+
+    public static class Values<T> extends SeqCollection<T, Collection<T>> {
+        public Values(Collection<T> backer) {
+            super(backer);
+        }
     }
 }

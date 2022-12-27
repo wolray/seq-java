@@ -1,24 +1,13 @@
 package com.github.wolray.seq;
 
 import java.util.*;
-import java.util.function.Consumer;
 
 /**
  * @author wolray
  */
-public class SeqList<T> extends BackedSeq<T, List<T>> implements List<T> {
+public class SeqList<T> extends SeqCollection<T, List<T>> implements List<T> {
     SeqList(List<T> backer) {
         super(backer);
-    }
-
-    @Override
-    public void supply(Consumer<T> consumer) {
-        backer.forEach(consumer);
-    }
-
-    @Override
-    public String toString() {
-        return backer.toString();
     }
 
     public static <T> SeqList<T> of(List<T> list) {
@@ -36,56 +25,6 @@ public class SeqList<T> extends BackedSeq<T, List<T>> implements List<T> {
 
     public static <T> SeqList<T> linked() {
         return new SeqList<>(new LinkedList<>());
-    }
-
-    @Override
-    public int size() {
-        return backer.size();
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return backer.isEmpty();
-    }
-
-    @Override
-    public boolean contains(Object o) {
-        return backer.contains(o);
-    }
-
-    @Override
-    public Iterator<T> iterator() {
-        return backer.iterator();
-    }
-
-    @Override
-    public Object[] toArray() {
-        return backer.toArray();
-    }
-
-    @Override
-    public <E> E[] toArray(E[] a) {
-        return backer.toArray(a);
-    }
-
-    @Override
-    public boolean add(T t) {
-        return backer.add(t);
-    }
-
-    @Override
-    public boolean remove(Object o) {
-        return backer.remove(o);
-    }
-
-    @Override
-    public boolean containsAll(Collection<?> c) {
-        return backer.containsAll(c);
-    }
-
-    @Override
-    public boolean addAll(Collection<? extends T> c) {
-        return backer.addAll(c);
     }
 
     @Override
