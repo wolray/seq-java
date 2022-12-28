@@ -79,48 +79,6 @@ public interface Seq<T> extends Seq0<Consumer<T>>, Transformer<T, T> {
         };
     }
 
-    default IntSeq mapToInt(ToIntFunction<T> function) {
-        return c -> supply(t -> c.accept(function.applyAsInt(t)));
-    }
-
-    default Seq<T> circle() {
-        return c -> {
-            while (true) {
-                supply(c);
-            }
-        };
-    }
-
-    default Seq<T> duplicateAll(int times) {
-        return c -> {
-            for (int i = 0; i < times; i++) {
-                supply(c);
-            }
-        };
-    }
-
-    default Seq<SeqList<T>> chunked(int size) {
-        return chunked(size, Transformer::toList);
-    }
-
-    default <E> Seq<E> chunked(int size, ToFolder<E, T> toFolder) {
-        return c -> {
-            IntPair<Folder<E, T>> last = feed(new IntPair<>(0, (Folder<E, T>)null), (p, t) -> {
-                if (p.second == null) {
-                    p.second = toFolder.gen();
-                } else if (p.first >= size) {
-                    c.accept(p.second.get());
-                    p.first = 0;
-                    p.second = toFolder.gen();
-                }
-                p.first++;
-                p.second.accept(t);
-            }).eval();
-            c.accept(last.second.get());
-        };
-    }
-
-    @SuppressWarnings("unchecked")
     default Seq<T> append(T t, T... more) {
         return c -> {
             supply(c);
@@ -145,14 +103,8 @@ public interface Seq<T> extends Seq0<Consumer<T>>, Transformer<T, T> {
         };
     }
 
-    default <E> void zipWith(Iterable<E> es, BiConsumer<T, E> consumer) {
-        tillStop(feed(es.iterator(), (itr, t) -> {
-            if (itr.hasNext()) {
-                consumer.accept(t, itr.next());
-            } else {
-                Seq0.stop();
-            }
-        }));
+    default Seq<T> cache() {
+        return toBatchList().eval();
     }
 
     default Seq<T> cacheBy(Cache<T> cache) {
@@ -172,8 +124,45 @@ public interface Seq<T> extends Seq0<Consumer<T>>, Transformer<T, T> {
         }
     }
 
-    default Seq<T> cache() {
-        return toBatchList().eval();
+    default <E> Seq<E> chunked(int size, ToFolder<E, T> toFolder) {
+        return c -> {
+            IntPair<Folder<E, T>> last = feed(new IntPair<>(0, (Folder<E, T>)null), (p, t) -> {
+                if (p.second == null) {
+                    p.second = toFolder.gen();
+                } else if (p.first >= size) {
+                    c.accept(p.second.get());
+                    p.first = 0;
+                    p.second = toFolder.gen();
+                }
+                p.first++;
+                p.second.accept(t);
+            }).eval();
+            c.accept(last.second.get());
+        };
+    }
+
+    default Seq<SeqList<T>> chunked(int size) {
+        return chunked(size, Transformer::toList);
+    }
+
+    default Seq<T> circle() {
+        return c -> {
+            while (true) {
+                supply(c);
+            }
+        };
+    }
+
+    default Seq<T> duplicateAll(int times) {
+        return c -> {
+            for (int i = 0; i < times; i++) {
+                supply(c);
+            }
+        };
+    }
+
+    default IntSeq mapToInt(ToIntFunction<T> function) {
+        return c -> supply(t -> c.accept(function.applyAsInt(t)));
     }
 
     default ParallelSeq<T> parallel() {
@@ -193,6 +182,16 @@ public interface Seq<T> extends Seq0<Consumer<T>>, Transformer<T, T> {
         } else {
             System.out.println(join(sep).eval());
         }
+    }
+
+    default <E> void zipWith(Iterable<E> es, BiConsumer<T, E> consumer) {
+        tillStop(feed(es.iterator(), (itr, t) -> {
+            if (itr.hasNext()) {
+                consumer.accept(t, itr.next());
+            } else {
+                Seq0.stop();
+            }
+        }));
     }
 
     class Empty {
