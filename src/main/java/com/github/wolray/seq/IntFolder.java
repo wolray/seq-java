@@ -8,9 +8,20 @@ import java.util.function.Supplier;
 /**
  * @author wolray
  */
-public interface IntFolder<E> extends IntConsumer, Supplier<E> {
-    default <R> IntFolder<R> map(Function<E, R> function) {
-        return new IntFolder<R>() {
+public abstract class IntFolder<E> implements IntConsumer, Supplier<E> {
+    private final IntSeq seq;
+
+    public IntFolder(IntSeq seq) {
+        this.seq = seq;
+    }
+
+    public E eval() {
+        seq.tillStop(this);
+        return get();
+    }
+
+    public <R> IntFolder<R> map(Function<E, R> function) {
+        return new IntFolder<R>(seq) {
             @Override
             public void accept(int t) {
                 IntFolder.this.accept(t);
@@ -23,11 +34,11 @@ public interface IntFolder<E> extends IntConsumer, Supplier<E> {
         };
     }
 
-    default IntFolder<String> format(String format) {
+    public IntFolder<String> format(String format) {
         return map(it -> String.format(format, it));
     }
 
-    default IntFolder<E> then(Consumer<E> consumer) {
+    public IntFolder<E> then(Consumer<E> consumer) {
         return map(e -> {
             consumer.accept(e);
             return e;
