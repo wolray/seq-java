@@ -7,7 +7,7 @@ import java.util.function.*;
 /**
  * @author wolray
  */
-public interface IntSeq extends IntFoldable {
+public interface IntSeq extends Seq0<IntConsumer> {
     IntSeq empty = c -> {};
     IntConsumer nothing = t -> {};
 
@@ -76,6 +76,70 @@ public interface IntSeq extends IntFoldable {
         return c -> {
             for (int i = 0; i < n; i++) {
                 c.accept(value);
+            }
+        };
+    }
+
+    default <E> IntFolder<E> find(E ifNotFound, IntPredicate predicate, IntFunction<E> function) {
+        return new AccIntFolder<E>(ifNotFound) {
+            @Override
+            public void accept(int t) {
+                if (predicate.test(t)) {
+                    acc = function.apply(t);
+                    Seq0.stop();
+                }
+            }
+        };
+    }
+
+    default <E> IntFolder<E> fold(E init, ObjIntToObj<E> function) {
+        return new AccIntFolder<E>(init) {
+            @Override
+            public void accept(int t) {
+                acc = function.apply(acc, t);
+            }
+        };
+    }
+
+    default IntFolder<Integer> foldIndexed(IndexIntConsumer consumer) {
+        return foldIndexed(0, consumer);
+    }
+
+    default IntFolder<Integer> foldIndexed(int start, IndexIntConsumer consumer) {
+        return foldInt(start, (i, t) -> {
+            consumer.accept(i, t);
+            return i + 1;
+        });
+    }
+
+    default IntFolder<Integer> foldInt(int init, IntBinaryOperator function) {
+        return new IntFolder<Integer>() {
+            int acc = init;
+
+            @Override
+            public Integer get() {
+                return acc;
+            }
+
+            @Override
+            public void accept(int t) {
+                acc = function.applyAsInt(acc, t);
+            }
+        };
+    }
+
+    default IntFolder<Boolean> foldBool(boolean init, BooleanIntToBoolean function) {
+        return new IntFolder<Boolean>() {
+            boolean acc = init;
+
+            @Override
+            public Boolean get() {
+                return acc;
+            }
+
+            @Override
+            public void accept(int t) {
+                acc = function.apply(acc, t);
             }
         };
     }
@@ -153,7 +217,7 @@ public interface IntSeq extends IntFoldable {
             if (i < n) {
                 c.accept(t);
             } else {
-                stop();
+                Seq0.stop();
             }
         }));
     }
@@ -175,7 +239,7 @@ public interface IntSeq extends IntFoldable {
             if (predicate.test(t)) {
                 c.accept(t);
             } else {
-                stop();
+                Seq0.stop();
             }
         });
     }
@@ -228,5 +292,30 @@ public interface IntSeq extends IntFoldable {
             supply(c);
             seq.supply(c);
         };
+    }
+
+    abstract class AccIntFolder<E> implements IntFolder<E> {
+        protected E acc;
+
+        public AccIntFolder(E acc) {
+            this.acc = acc;
+        }
+
+        @Override
+        public E get() {
+            return acc;
+        }
+    }
+
+    interface IndexIntConsumer {
+        void accept(int i, int t);
+    }
+
+    interface BooleanIntToBoolean {
+        boolean apply(boolean acc, int t);
+    }
+
+    interface ObjIntToObj<E> {
+        E apply(E e, int t);
     }
 }

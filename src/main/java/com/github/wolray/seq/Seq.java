@@ -1,13 +1,27 @@
 package com.github.wolray.seq;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.*;
 
 /**
  * @author wolray
  */
-public interface Seq<T> extends Foldable<T> {
+public interface Seq<T> extends Seq0<Consumer<T>>, Transformer<T, T> {
+    void supply(Consumer<T> consumer);
+
+    @Override
+    default Seq<T> source() {
+        return this;
+    }
+
+    @Override
+    default Consumer<T> apply(Consumer<T> consumer) {
+        return consumer;
+    }
+
     @SafeVarargs
     static <T> Seq<T> of(T... ts) {
         return of(Arrays.asList(ts));
@@ -69,31 +83,6 @@ public interface Seq<T> extends Foldable<T> {
         return c -> supply(t -> c.accept(function.applyAsInt(t)));
     }
 
-    default <E> Seq<E> map(Function<T, E> function) {
-        return c -> supply(t -> c.accept(function.apply(t)));
-    }
-
-    default <E> Seq<E> mapNotNull(Function<T, E> function) {
-        return c -> supply(t -> {
-            E e = function.apply(t);
-            if (e != null) {
-                c.accept(e);
-            }
-        });
-    }
-
-    default <E> Seq<E> mapCe(WithCe.Function<T, E> function) {
-        return map(WithCe.mapper(function));
-    }
-
-    default Seq<Pair<T, T>> mapPair(boolean overlapping) {
-        return mapPair(overlapping, Pair::new);
-    }
-
-    default <E> Seq<E> mapPair(boolean overlapping, BiFunction<T, T, E> function) {
-        return c -> supply(foldPair(overlapping, (t1, t2) -> c.accept(function.apply(t1, t2))));
-    }
-
     default Seq<T> circle() {
         return c -> {
             while (true) {
@@ -130,173 +119,8 @@ public interface Seq<T> extends Foldable<T> {
         });
     }
 
-    default <E> Seq<T> onFolder(ToFolder<E, T> toFolder) {
-        return c -> supply(toFolder.gen().andThen(c));
-    }
-
-    default Seq<T> onEach(Consumer<T> consumer) {
-        return c -> supply(consumer.andThen(c));
-    }
-
-    default Seq<T> onFirst(Consumer<T> consumer) {
-        return onFirst(1, consumer);
-    }
-
-    default Seq<T> onFirst(int n, Consumer<T> consumer) {
-        return c -> supply(foldIndexed((i, t) -> {
-            if (i >= n) {
-                c.accept(t);
-            } else {
-                consumer.accept(t);
-                c.accept(t);
-            }
-        }));
-    }
-
-    default Seq<T> onLast(Consumer<T> consumer) {
-        return c -> {
-            T last = fold((T)null, (prev, t) -> {
-                c.accept(t);
-                return t;
-            }).eval();
-            if (last != null) {
-                consumer.accept(last);
-            }
-        };
-    }
-
-    default Seq<T> filter(Predicate<T> predicate) {
-        return c -> supply(t -> {
-            if (predicate.test(t)) {
-                c.accept(t);
-            }
-        });
-    }
-
-    default Seq<T> filterNot(Predicate<T> predicate) {
-        return filter(predicate.negate());
-    }
-
-    default Seq<T> filterNotNull() {
-        return filter(Objects::nonNull);
-    }
-
-    default Seq<T> filterIn(Collection<T> collection) {
-        return filter(collection::contains);
-    }
-
-    default Seq<T> filterNotIn(Collection<T> collection) {
-        return filterNot(collection::contains);
-    }
-
-    default Seq<T> filterIn(Map<T, ?> map) {
-        return filter(map::containsKey);
-    }
-
-    default Seq<T> filterNotIn(Map<T, ?> map) {
-        return filterNot(map::containsKey);
-    }
-
-    default Seq<T> take(int n) {
-        return c -> tillStop(foldIndexed((i, t) -> {
-            if (i < n) {
-                c.accept(t);
-            } else {
-                stop();
-            }
-        }));
-    }
-
-    default Seq<T> drop(int n) {
-        return forFirst(n, Seq.nothing());
-    }
-
-    default Seq<T> forFirst(Consumer<T> consumer) {
-        return forFirst(1, consumer);
-    }
-
-    default Seq<T> forFirst(int n, Consumer<T> consumer) {
-        return c -> supply(foldIndexed((i, t) -> (i >= n ? c : consumer).accept(t)));
-    }
-
-    default Seq<T> takeWhile(Predicate<T> predicate) {
-        return c -> tillStop(t -> {
-            if (predicate.test(t)) {
-                c.accept(t);
-            } else {
-                stop();
-            }
-        });
-    }
-
-    default Seq<T> takeWhile(BiPredicate<T, T> testPrevCurr) {
-        return takeWhile(t -> t, testPrevCurr);
-    }
-
-    default <E> Seq<T> takeWhile(Function<T, E> function, BiPredicate<E, E> testPrevCurr) {
-        return c -> tillStop(fold((E)null, (last, t) -> {
-            E e = function.apply(t);
-            if (last == null || testPrevCurr.test(last, e)) {
-                c.accept(t);
-                return e;
-            } else {
-                return stop();
-            }
-        }));
-    }
-
-    default Seq<T> takeWhileEquals() {
-        return takeWhile(t -> t, Objects::equals);
-    }
-
-    default <E> Seq<T> takeWhileEquals(Function<T, E> function) {
-        return takeWhile(function, Objects::equals);
-    }
-
-    default Seq<T> dropWhile(Predicate<T> predicate) {
-        return c -> supply(foldBoolean(false, (b, t) -> {
-            if (b || !predicate.test(t)) {
-                c.accept(t);
-                return true;
-            }
-            return false;
-        }));
-    }
-
-    default <E> Seq<Pair<T, E>> pairWith(Function<T, E> function) {
-        return map(t -> new Pair<>(t, function.apply(t)));
-    }
-
-    default Seq<IntPair<T>> withInt(ToIntFunction<T> function) {
-        return map(t -> new IntPair<>(function.applyAsInt(t), t));
-    }
-
-    default Seq<LongPair<T>> withLong(ToLongFunction<T> function) {
-        return map(t -> new LongPair<>(function.applyAsLong(t), t));
-    }
-
-    default Seq<IntPair<T>> withIndex() {
-        return withIndex(0);
-    }
-
-    default Seq<IntPair<T>> withIndex(int start) {
-        return c -> supply(foldIndexed(start, (i, t) -> c.accept(new IntPair<>(i, t))));
-    }
-
-    default Seq<T> distinct() {
-        return distinctBy(it -> it);
-    }
-
-    default <E> Seq<T> distinctBy(Function<T, E> function) {
-        return c -> supply(feed(new HashSet<>(), (set, t) -> {
-            if (set.add(function.apply(t))) {
-                c.accept(t);
-            }
-        }));
-    }
-
     default Seq<SeqList<T>> chunked(int size) {
-        return chunked(size, Foldable::toList);
+        return chunked(size, Transformer::toList);
     }
 
     default <E> Seq<E> chunked(int size, ToFolder<E, T> toFolder) {
@@ -314,42 +138,6 @@ public interface Seq<T> extends Foldable<T> {
             }).eval();
             c.accept(last.second.get());
         };
-    }
-
-    default <E> Seq<E> flatMap(Function<T, Seq<E>> function) {
-        return c -> supply(t -> function.apply(t).supply(c));
-    }
-
-    default <E> Seq<E> runningFold(E init, BiFunction<E, T, E> function) {
-        return c -> supply(fold(init, (e, t) -> {
-            e = function.apply(e, t);
-            c.accept(e);
-            return e;
-        }));
-    }
-
-    default <E> Seq<E> mapSub(T first, T last, ToFolder<E, T> function) {
-        return mapSub(first::equals, last::equals, function);
-    }
-
-    default <E, V> Seq<E> mapSub(V first, V last, Function<T, V> function, ToFolder<E, T> toFolder) {
-        return mapSub(t -> first.equals(function.apply(t)), t -> last.equals(function.apply(t)), toFolder);
-    }
-
-    default <E> Seq<E> mapSub(Predicate<T> first, Predicate<T> last, ToFolder<E, T> toFolder) {
-        return c -> supply(fold((Folder<E, T>)null, (f, t) -> {
-            if (f == null && first.test(t)) {
-                f = toFolder.gen();
-                f.accept(t);
-            } else if (f != null) {
-                f.accept(t);
-                if (last.test(t)) {
-                    c.accept(f.get());
-                    return null;
-                }
-            }
-            return f;
-        }));
     }
 
     @SuppressWarnings("unchecked")
@@ -377,44 +165,12 @@ public interface Seq<T> extends Foldable<T> {
         };
     }
 
-    default Seq<List<T>> permute(boolean inplace) {
-        return c -> SeqUtil.permute(c, toArrayList().eval(), 0, inplace);
-    }
-
-    default <E> Seq<Pair<T, E>> zip(Iterable<E> iterable) {
-        return zip(iterable, Pair::new);
-    }
-
-    default <E, R> Seq<R> zip(Iterable<E> iterable, BiFunction<T, E, R> function) {
-        return c -> tillStop(feed(iterable.iterator(), (itr, t) -> {
-            if (itr.hasNext()) {
-                c.accept(function.apply(t, itr.next()));
-            } else {
-                stop();
-            }
-        }));
-    }
-
-    default <B, C> Seq<Triple<T, B, C>> zip(Iterable<B> bs, Iterable<C> cs) {
-        return c -> {
-            Iterator<B> bi = bs.iterator();
-            Iterator<C> ci = cs.iterator();
-            tillStop(t -> {
-                if (bi.hasNext() && ci.hasNext()) {
-                    c.accept(new Triple<>(t, bi.next(), ci.next()));
-                } else {
-                    stop();
-                }
-            });
-        };
-    }
-
     default <E> void zipWith(Iterable<E> es, BiConsumer<T, E> consumer) {
         tillStop(feed(es.iterator(), (itr, t) -> {
             if (itr.hasNext()) {
                 consumer.accept(t, itr.next());
             } else {
-                stop();
+                Seq0.stop();
             }
         }));
     }
@@ -427,12 +183,12 @@ public interface Seq<T> extends Foldable<T> {
         if (cache.exists()) {
             return cache.read();
         } else {
-            return toBatchList(batchSize)
-                .then(ls -> {
-                    if (ls.isNotEmpty()) {
-                        cache.write(ls);
-                    }
-                }).eval();
+            Folder<BatchList<T>, T> folder = toBatchList(batchSize);
+            return folder.then(ls -> {
+                if (ls.isNotEmpty()) {
+                    cache.write(ls);
+                }
+            }).eval();
         }
     }
 
@@ -445,15 +201,6 @@ public interface Seq<T> extends Foldable<T> {
             ForkJoinPool pool = new ForkJoinPool();
             supply(t -> pool.submit(() -> c.accept(t)));
         };
-    }
-
-    default void assertTo(String s) {
-        assertTo(",", s);
-    }
-
-    default void assertTo(String sep, String s) {
-        String result = join(sep).eval();
-        assert result.equals(s) : result;
     }
 
     default void printAll() {

@@ -3,7 +3,7 @@ package com.github.wolray.seq;
 /**
  * @author wolray
  */
-public interface Foldable0<C> {
+public interface Seq0<C> {
     void supply(C consumer);
 
     default void tillStop(C consumer) {
@@ -12,7 +12,7 @@ public interface Foldable0<C> {
         } catch (StopException ignore) {}
     }
 
-    default <E> E stop() throws StopException {
+    static <T> T stop() {
         throw StopException.INSTANCE;
     }
 

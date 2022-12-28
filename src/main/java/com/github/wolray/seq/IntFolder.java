@@ -8,20 +8,9 @@ import java.util.function.Supplier;
 /**
  * @author wolray
  */
-public abstract class IntFolder<E> implements IntConsumer, Supplier<E> {
-    private final IntFoldable foldable;
-
-    public IntFolder(IntFoldable foldable) {
-        this.foldable = foldable;
-    }
-
-    public E eval() {
-        foldable.tillStop(this);
-        return get();
-    }
-
-    public <R> IntFolder<R> map(Function<E, R> function) {
-        return new IntFolder<R>(foldable) {
+public interface IntFolder<E> extends IntConsumer, Supplier<E> {
+    default <R> IntFolder<R> map(Function<E, R> function) {
+        return new IntFolder<R>() {
             @Override
             public void accept(int t) {
                 IntFolder.this.accept(t);
@@ -34,11 +23,11 @@ public abstract class IntFolder<E> implements IntConsumer, Supplier<E> {
         };
     }
 
-    public IntFolder<String> format(String format) {
+    default IntFolder<String> format(String format) {
         return map(it -> String.format(format, it));
     }
 
-    public IntFolder<E> then(Consumer<E> consumer) {
+    default IntFolder<E> then(Consumer<E> consumer) {
         return map(e -> {
             consumer.accept(e);
             return e;

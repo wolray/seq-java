@@ -20,7 +20,7 @@ public abstract class PickItr<T> implements Seq<T>, Iterator<T> {
             public T pick() {
                 while (!cur.hasNext()) {
                     if (!iterator.hasNext()) {
-                        stop();
+                        Seq0.stop();
                     }
                     cur = iterator.next().iterator();
                 }
@@ -42,7 +42,7 @@ public abstract class PickItr<T> implements Seq<T>, Iterator<T> {
             try {
                 next = pick();
                 state = State.Cached;
-            } catch (Foldable0.StopException e) {
+            } catch (Seq0.StopException e) {
                 state = State.Done;
             }
         }

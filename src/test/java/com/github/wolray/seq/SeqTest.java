@@ -14,7 +14,7 @@ public class SeqTest {
     @Test
     public void testResult() {
         Seq<Integer> seq1 = Seq.of(0, 2, 4, 1, 6, 3, 8, 10, 11, 12);
-        Seq<Integer> filtered1 = seq1.take(5);
+        Seq<Integer> filtered1 = seq1.take(5).commit();
         filtered1.assertTo("0,2,4,1,6");
         filtered1.assertTo("0,2,4,1,6");
 
@@ -30,7 +30,7 @@ public class SeqTest {
         seq1.take(5).assertTo("0,2,4,1,6");
         seq1.take(5).drop(2).assertTo("4,1,6");
 
-        Seq<Integer> token1 = Seq.tillNull(() -> 1).take(5);
+        Seq<Integer> token1 = Seq.tillNull(() -> 1).take(5).commit();
         token1.assertTo("1,1,1,1,1");
         token1.assertTo("1,1,1,1,1");
         IntSeq token2 = IntSeq.gen(() -> 1).take(5);
@@ -54,13 +54,9 @@ public class SeqTest {
     @Test
     public void partitionTest() {
         Seq<Integer> seq = Seq.of(0, 2, 4, 1, 6, 3, 5, 7, 10, 11, 12);
-        Pair<BatchList<Integer>, BatchList<Integer>> pair1 = seq.partition(i -> (i & 1) > 0, Foldable::toBatchList).eval();
+        Pair<BatchList<Integer>, BatchList<Integer>> pair1 = seq.partition(i -> (i & 1) > 0).eval();
         pair1.first.assertTo("1,3,5,7,11");
         pair1.second.assertTo("0,2,4,6,10,12");
-
-        Pair<BatchList<Integer>, BatchList<Integer>> pair2 = seq.partition(i -> (i & 1) > 0).eval();
-        pair2.first.assertTo("1,3,5,7,11");
-        pair2.second.assertTo("0,2,4,6,10,12");
     }
 
     @Test
@@ -76,14 +72,14 @@ public class SeqTest {
 
     @Test
     public void testYield() {
-        Seq<Integer> fib1 = Seq.gen(1, 1, Integer::sum).take(10);
+        Seq<Integer> fib1 = Seq.gen(1, 1, Integer::sum).take(10).commit();
         fib1.assertTo("1,1,2,3,5,8,13,21,34,55");
         fib1.assertTo("1,1,2,3,5,8,13,21,34,55");
         IntSeq fib2 = IntSeq.gen(1, 1, Integer::sum).take(10);
         fib2.boxed().assertTo("1,1,2,3,5,8,13,21,34,55");
         fib2.boxed().assertTo("1,1,2,3,5,8,13,21,34,55");
 
-        Seq<Integer> quad1 = Seq.gen(1, i -> i * 2).take(10);
+        Seq<Integer> quad1 = Seq.gen(1, i -> i * 2).take(10).commit();
         quad1.assertTo("1,2,4,8,16,32,64,128,256,512");
         quad1.assertTo("1,2,4,8,16,32,64,128,256,512");
         IntSeq quad2 = IntSeq.gen(1, i -> i * 2).take(10);
@@ -173,25 +169,20 @@ public class SeqTest {
             new Triple<>("john", 2009, "success"),
             new Triple<>("chris", 2007, "fail"),
             new Triple<>("john", 2005, "fail"));
-        seq.groupBy(t -> t.first, Foldable.mapping(t -> t.second, Foldable::sorted)).eval()
-            .assertTo("\t", "chris=[2007, 2013]\tjohn=[2005, 2009, 2012, 2013, 2015]");
+        seq.map(t -> t.first + t.second)
+            .groupBy(t -> t.charAt(0), s -> s.map(it -> it.substring(4)).sorted()).eval()
+            .assertTo("c=[s2007, s2013],j=[2005, 2009, 2012, 2013, 2015]");
+        seq.groupBy(t -> t.first, s -> s.map(t -> t.second).sorted()).eval()
+            .assertTo("chris=[2007, 2013],john=[2005, 2009, 2012, 2013, 2015]");
     }
 
     @Test
     public void testPair() {
         Seq<Integer> seq = Seq.of(1, 2, 3, 4, 5, 6, 7);
-
-        SinglyList<String> pairs1 = new SinglyList<>();
-        seq.onFolder(f -> f.foldPair(false, (p1, p2) -> pairs1.add(p1 + "+" + p2))).assertTo("1,2,3,4,5,6,7");
-        pairs1.assertTo("1+2,3+4,5+6");
-        SinglyList<String> pairs2 = new SinglyList<>();
-        seq.onFolder(f -> f.foldPair(true, (p1, p2) -> pairs2.add(p1 + "+" + p2))).assertTo("1,2,3,4,5,6,7");
-        pairs2.assertTo("1+2,2+3,3+4,4+5,5+6,6+7");
-
-        Seq<String> seq1 = seq.mapPair(false, (p1, p2) -> p1 + "+" + p2);
+        Seq<String> seq1 = seq.mapPair(false, (p1, p2) -> p1 + "+" + p2).commit();
         seq1.assertTo("1+2,3+4,5+6");
         assert "5+6".equals(seq1.last().eval());
-        Seq<String> seq2 = seq.mapPair(true, (p1, p2) -> p1 + "+" + p2);
+        Seq<String> seq2 = seq.mapPair(true, (p1, p2) -> p1 + "+" + p2).commit();
         seq2.assertTo("1+2,2+3,3+4,4+5,5+6,6+7");
         assert "6+7".equals(seq2.last().eval());
     }

@@ -8,19 +8,19 @@ import java.util.function.Supplier;
  * @author wolray
  */
 public abstract class Folder<E, T> implements Consumer<T>, Supplier<E> {
-    private final Foldable<T> foldable;
+    private final Seq<T> seq;
 
-    public Folder(Foldable<T> foldable) {
-        this.foldable = foldable;
+    public Folder(Seq<T> seq) {
+        this.seq = seq;
     }
 
     public E eval() {
-        foldable.tillStop(this);
+        seq.tillStop(this);
         return get();
     }
 
     public <R> Folder<R, T> map(Function<E, R> function) {
-        return new Folder<R, T>(foldable) {
+        return new Folder<R, T>(seq) {
             @Override
             public void accept(T t) {
                 Folder.this.accept(t);
@@ -42,5 +42,19 @@ public abstract class Folder<E, T> implements Consumer<T>, Supplier<E> {
             consumer.accept(e);
             return e;
         });
+    }
+
+    static abstract class AccFolder<E, T> extends Folder<E, T> {
+        protected E acc;
+
+        public AccFolder(Seq<T> seq, E init) {
+            super(seq);
+            acc = init;
+        }
+
+        @Override
+        public E get() {
+            return acc;
+        }
     }
 }
