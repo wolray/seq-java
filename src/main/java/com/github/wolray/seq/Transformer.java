@@ -343,6 +343,10 @@ public interface Transformer<S, T> {
         return map(WithCe.mapper(function));
     }
 
+    default <E> Transformer<S, E> mapIndexed(IndexObjFunction<T, E> function) {
+        return mapping(c -> foldIndexed((i, t) -> c.accept(function.apply(i, t))));
+    }
+
     default <E> Transformer<S, E> mapNotNll(Function<T, E> function) {
         return mapping(c -> apply(t -> {
             E e = function.apply(t);
@@ -461,6 +465,10 @@ public interface Transformer<S, T> {
 
     default Transformer<S, T> onEach(Consumer<T> consumer) {
         return mapping(c -> apply(consumer.andThen(c)));
+    }
+
+    default Transformer<S, T> onEachIndexed(IndexObjConsumer<T> consumer) {
+        return mapping(c -> foldIndexed(consumer));
     }
 
     default Transformer<S, T> onFirst(Consumer<T> consumer) {
@@ -746,6 +754,10 @@ public interface Transformer<S, T> {
 
     interface IndexObjConsumer<T> {
         void accept(int i, T t);
+    }
+
+    interface IndexObjFunction<T, E> {
+        E apply(int i, T t);
     }
 
     interface IntObjToInt<T> {

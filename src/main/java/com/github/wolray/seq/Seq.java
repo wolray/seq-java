@@ -79,6 +79,7 @@ public interface Seq<T> extends Seq0<Consumer<T>>, Transformer<T, T> {
         };
     }
 
+    @SuppressWarnings("unchecked")
     default Seq<T> append(T t, T... more) {
         return c -> {
             supply(c);
