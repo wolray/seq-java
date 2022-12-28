@@ -18,7 +18,7 @@ public class BackedSeq<T, C extends Collection<T>> implements Seq<T> {
         backer.forEach(consumer);
     }
 
-//    @Override
+    @Override
     public int sizeOrDefault() {
         return backer.size();
     }

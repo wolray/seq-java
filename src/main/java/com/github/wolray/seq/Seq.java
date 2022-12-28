@@ -18,8 +18,8 @@ public interface Seq<T> extends Seq0<Consumer<T>>, Transformer<T, T> {
     }
 
     @Override
-    default Consumer<T> apply(Consumer<T> consumer) {
-        return consumer;
+    default Consumer<T> apply(Consumer<T> c) {
+        return c;
     }
 
     @SafeVarargs

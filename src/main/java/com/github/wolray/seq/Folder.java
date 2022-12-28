@@ -43,18 +43,4 @@ public abstract class Folder<E, T> implements Consumer<T>, Supplier<E> {
             return e;
         });
     }
-
-    static abstract class AccFolder<E, T> extends Folder<E, T> {
-        protected E acc;
-
-        public AccFolder(Seq<T> seq, E init) {
-            super(seq);
-            acc = init;
-        }
-
-        @Override
-        public E get() {
-            return acc;
-        }
-    }
 }

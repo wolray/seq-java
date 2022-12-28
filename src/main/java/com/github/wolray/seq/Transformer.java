@@ -6,14 +6,15 @@ import java.util.function.*;
 /**
  * @author wolray
  */
-public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
+public interface Transformer<S, T> {
     Seq<S> source();
+    Consumer<S> apply(Consumer<T> c);
 
     default Seq<T> commit() {
         return c -> source().tillStop(apply(c));
     }
 
-    default <E> Transformer<S, E> transform(Function<Consumer<E>, Consumer<S>> function) {
+    default <E> Transformer<S, E> mapping(Function<Consumer<E>, Consumer<S>> function) {
         return new Transformer<S, E>() {
             @Override
             public Seq<S> source() {
@@ -21,14 +22,14 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
             }
 
             @Override
-            public Consumer<S> apply(Consumer<E> consumer) {
-                return function.apply(consumer);
+            public Consumer<S> apply(Consumer<E> c) {
+                return function.apply(c);
             }
         };
     }
 
     default <E> Transformer<S, E> map(Function<T, E> function) {
-        return transform(c -> apply(t -> c.accept(function.apply(t))));
+        return mapping(c -> apply(t -> c.accept(function.apply(t))));
     }
 
     default <E> Transformer<S, E> mapCe(WithCe.Function<T, E> function) {
@@ -36,7 +37,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default <E> Transformer<S, E> mapNotNll(Function<T, E> function) {
-        return transform(c -> apply(t -> {
+        return mapping(c -> apply(t -> {
             E e = function.apply(t);
             if (e != null) {
                 c.accept(e);
@@ -49,7 +50,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default <E> Transformer<S, E> mapPair(boolean overlapping, BiFunction<T, T, E> function) {
-        return transform(c -> fold((T)null, (last, t) -> {
+        return mapping(c -> fold((T)null, (last, t) -> {
             if (last != null) {
                 c.accept(function.apply(last, t));
                 return overlapping ? t : null;
@@ -59,7 +60,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default Transformer<S, T> duplicateEach(int times) {
-        return transform(c -> apply(t -> {
+        return mapping(c -> apply(t -> {
             for (int i = 0; i < times; i++) {
                 c.accept(t);
             }
@@ -67,7 +68,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default Transformer<S, T> duplicateIf(int times, Predicate<T> predicate) {
-        return transform(c -> apply(t -> {
+        return mapping(c -> apply(t -> {
             if (predicate.test(t)) {
                 for (int i = 0; i < times; i++) {
                     c.accept(t);
@@ -79,7 +80,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default Transformer<S, T> filter(Predicate<T> predicate) {
-        return transform(c -> apply(t -> {
+        return mapping(c -> apply(t -> {
             if (predicate.test(t)) {
                 c.accept(t);
             }
@@ -111,7 +112,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default Transformer<S, T> take(int n) {
-        return transform(c -> foldIndexed((i, t) -> {
+        return mapping(c -> foldIndexed((i, t) -> {
             if (i < n) {
                 c.accept(t);
             } else {
@@ -129,11 +130,11 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default Transformer<S, T> forFirst(int n, Consumer<T> consumer) {
-        return transform(c -> foldIndexed((i, t) -> (i >= n ? c : consumer).accept(t)));
+        return mapping(c -> foldIndexed((i, t) -> (i >= n ? c : consumer).accept(t)));
     }
 
     default Transformer<S, T> takeWhile(Predicate<T> predicate) {
-        return transform(c -> apply(t -> {
+        return mapping(c -> apply(t -> {
             if (predicate.test(t)) {
                 c.accept(t);
             } else {
@@ -147,7 +148,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default <E> Transformer<S, T> takeWhile(Function<T, E> function, BiPredicate<E, E> testPrevCurr) {
-        return transform(c -> fold((E)null, (last, t) -> {
+        return mapping(c -> fold((E)null, (last, t) -> {
             E e = function.apply(t);
             if (last == null || testPrevCurr.test(last, e)) {
                 c.accept(t);
@@ -167,7 +168,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default Transformer<S, T> dropWhile(Predicate<T> predicate) {
-        return transform(c -> foldBoolean(false, (b, t) -> {
+        return mapping(c -> foldBoolean(false, (b, t) -> {
             if (b || !predicate.test(t)) {
                 c.accept(t);
                 return true;
@@ -177,11 +178,11 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default <E> Transformer<S, T> onFolder(ToFolder<E, T> toFolder) {
-        return transform(c -> apply(toFolder.gen().andThen(c)));
+        return mapping(c -> apply(toFolder.gen().andThen(c)));
     }
 
     default Transformer<S, T> onEach(Consumer<T> consumer) {
-        return transform(c -> apply(consumer.andThen(c)));
+        return mapping(c -> apply(consumer.andThen(c)));
     }
 
     default Transformer<S, T> onFirst(Consumer<T> consumer) {
@@ -189,7 +190,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default Transformer<S, T> onFirst(int n, Consumer<T> consumer) {
-        return transform(c -> foldIndexed((i, t) -> {
+        return mapping(c -> foldIndexed((i, t) -> {
             if (i >= n) {
                 c.accept(t);
             } else {
@@ -216,7 +217,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default Transformer<S, IntPair<T>> withIndex(int start) {
-        return transform(c -> foldIndexed(start, (i, t) -> c.accept(new IntPair<>(i, t))));
+        return mapping(c -> foldIndexed(start, (i, t) -> c.accept(new IntPair<>(i, t))));
     }
 
     default Transformer<S, T> distinct() {
@@ -224,7 +225,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default <E> Transformer<S, T> distinctBy(Function<T, E> function) {
-        return transform(c -> feed(new HashSet<>(), (set, t) -> {
+        return mapping(c -> feed(new HashSet<>(), (set, t) -> {
             if (set.add(function.apply(t))) {
                 c.accept(t);
             }
@@ -232,11 +233,11 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default <E> Transformer<S, E> flatMap(Function<T, Seq<E>> function) {
-        return transform(c -> apply(t -> function.apply(t).supply(c)));
+        return mapping(c -> apply(t -> function.apply(t).supply(c)));
     }
 
     default <E> Transformer<S, E> runningFold(E init, BiFunction<E, T, E> function) {
-        return transform(c -> fold(init, (e, t) -> {
+        return mapping(c -> fold(init, (e, t) -> {
             e = function.apply(e, t);
             c.accept(e);
             return e;
@@ -252,7 +253,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default <E> Transformer<S, E> mapSub(Predicate<T> first, Predicate<T> last, ToFolder<E, T> toFolder) {
-        return transform(c -> fold((Folder<E, T>)null, (f, t) -> {
+        return mapping(c -> fold((Folder<E, T>)null, (f, t) -> {
             if (f == null && first.test(t)) {
                 f = toFolder.gen();
                 f.accept(t);
@@ -272,7 +273,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default <E, R> Transformer<S, R> zip(Iterable<E> iterable, BiFunction<T, E, R> function) {
-        return transform(c -> feed(iterable.iterator(), (itr, t) -> {
+        return mapping(c -> feed(iterable.iterator(), (itr, t) -> {
             if (itr.hasNext()) {
                 c.accept(function.apply(t, itr.next()));
             } else {
@@ -282,7 +283,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default <B, C> Transformer<S, Triple<T, B, C>> zip(Iterable<B> bs, Iterable<C> cs) {
-        return transform(c -> {
+        return mapping(c -> {
             Iterator<B> bi = bs.iterator();
             Iterator<C> ci = cs.iterator();
             return apply(t -> {
@@ -295,7 +296,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
         });
     }
 
-    default <E> Folder<E, S> mapFolder(Folder<E, T> folder) {
+    default <E> Folder<E, S> mappingFolder(Folder<E, T> folder) {
         Consumer<S> consumer = apply(folder);
         return new Folder<E, S>(source()) {
             @Override
@@ -311,7 +312,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default <E> Folder<E, S> feed(E des, BiConsumer<E, T> consumer) {
-        return mapFolder(new Folder.AccFolder<E, T>(Seq.empty(), des) {
+        return mappingFolder(new AccFolder<E, T>(des) {
             @Override
             public void accept(T t) {
                 consumer.accept(des, t);
@@ -320,7 +321,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default <E> Folder<E, S> find(E ifNotFound, Predicate<T> predicate, Function<T, E> function) {
-        return mapFolder(new Folder.AccFolder<E, T>(Seq.empty(), ifNotFound) {
+        return mappingFolder(new AccFolder<E, T>(ifNotFound) {
             @Override
             public void accept(T t) {
                 if (predicate.test(t)) {
@@ -332,7 +333,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default <E> Folder<E, S> fold(E init, BiFunction<E, T, E> function) {
-        return mapFolder(new Folder.AccFolder<E, T>(Seq.empty(), init) {
+        return mappingFolder(new AccFolder<E, T>(init) {
             @Override
             public void accept(T t) {
                 acc = function.apply(acc, t);
@@ -352,7 +353,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default Folder<Integer, S> foldInt(int init, IntObjToInt<T> function) {
-        return mapFolder(new Folder<Integer, T>(Seq.empty()) {
+        return mappingFolder(new Folder<Integer, T>(Seq.empty()) {
             int acc = init;
 
             @Override
@@ -368,7 +369,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default Folder<Double, S> foldDouble(double init, DoubleObjToDouble<T> function) {
-        return mapFolder(new Folder<Double, T>(Seq.empty()) {
+        return mappingFolder(new Folder<Double, T>(Seq.empty()) {
             double acc = init;
 
             @Override
@@ -384,7 +385,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default Folder<Long, S> foldLong(long init, LongObjToLong<T> function) {
-        return mapFolder(new Folder<Long, T>(Seq.empty()) {
+        return mappingFolder(new Folder<Long, T>(Seq.empty()) {
             long acc = init;
 
             @Override
@@ -400,7 +401,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     }
 
     default Folder<Boolean, S> foldBoolean(boolean init, BooleanObjToBoolean<T> function) {
-        return mapFolder(new Folder<Boolean, T>(Seq.empty()) {
+        return mappingFolder(new Folder<Boolean, T>(Seq.empty()) {
             boolean acc = init;
 
             @Override
@@ -653,8 +654,8 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
         return partition(predicate, Transformer::toBatchList);
     }
 
-    default <E> Folder<Pair<E, E>, S> partition(Predicate<T> predicate, Function<Seq<T>, Folder<E, T>> toFolder) {
-        return feed(new Pair<>(toFolder.apply(Seq.empty()), toFolder.apply(Seq.empty())), (p, t) ->
+    default <E> Folder<Pair<E, E>, S> partition(Predicate<T> predicate, ToFolder<E, T> toFolder) {
+        return feed(new Pair<>(toFolder.gen(), toFolder.gen()), (p, t) ->
             (predicate.test(t) ? p.first : p.second).accept(t))
             .map(p -> new Pair<>(p.first.get(), p.second.get()));
     }
@@ -700,8 +701,7 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
         Function<T, K> kFunction, ToFolder<V, T> toFolder) {
         Function<K, Supplier<V>> mappingFunction = k -> toFolder.gen();
         return feed(map, (m, t) -> {
-            K k = kFunction.apply(t);
-            Supplier<V> folder = m.computeIfAbsent(k, mappingFunction);
+            Supplier<V> folder = m.computeIfAbsent(kFunction.apply(t), mappingFunction);
             ((Folder<V, T>)folder).accept(t);
         }).map(m -> new SeqMap<>(m).replaceValue(Supplier::get));
     }
@@ -727,6 +727,20 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
     interface ToFolder<E, T> extends Function<Seq<T>, Folder<E, T>> {
         default Folder<E, T> gen() {
             return apply(Seq.empty());
+        }
+    }
+
+    abstract class AccFolder<E, T> extends Folder<E, T> {
+        protected E acc;
+
+        public AccFolder(E init) {
+            super(Seq.empty());
+            acc = init;
+        }
+
+        @Override
+        public E get() {
+            return acc;
         }
     }
 
