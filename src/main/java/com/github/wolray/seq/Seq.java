@@ -99,26 +99,6 @@ public interface Seq<T> extends Seq0<Consumer<T>>, Transformer<T, T> {
         };
     }
 
-    default Seq<T> duplicateEach(int times) {
-        return c -> supply(t -> {
-            for (int i = 0; i < times; i++) {
-                c.accept(t);
-            }
-        });
-    }
-
-    default Seq<T> duplicateIf(int times, Predicate<T> predicate) {
-        return c -> supply(t -> {
-            if (predicate.test(t)) {
-                for (int i = 0; i < times; i++) {
-                    c.accept(t);
-                }
-            } else {
-                c.accept(t);
-            }
-        });
-    }
-
     default Seq<SeqList<T>> chunked(int size) {
         return chunked(size, Transformer::toList);
     }

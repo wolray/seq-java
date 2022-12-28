@@ -58,6 +58,26 @@ public interface Transformer<S, T> extends Function<Consumer<T>, Consumer<S>> {
         }));
     }
 
+    default Transformer<S, T> duplicateEach(int times) {
+        return transform(c -> apply(t -> {
+            for (int i = 0; i < times; i++) {
+                c.accept(t);
+            }
+        }));
+    }
+
+    default Transformer<S, T> duplicateIf(int times, Predicate<T> predicate) {
+        return transform(c -> apply(t -> {
+            if (predicate.test(t)) {
+                for (int i = 0; i < times; i++) {
+                    c.accept(t);
+                }
+            } else {
+                c.accept(t);
+            }
+        }));
+    }
+
     default Transformer<S, T> filter(Predicate<T> predicate) {
         return transform(c -> apply(t -> {
             if (predicate.test(t)) {
