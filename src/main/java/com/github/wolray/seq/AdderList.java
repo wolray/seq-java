@@ -9,50 +9,27 @@ import java.util.Objects;
  * @author wolray
  */
 public interface AdderList<E> extends Seq<E>, List<E> {
-    default String join() {
-        if (isEmpty()) {
-            return "[]";
+    @Override
+    default void add(int index, E element) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    default boolean addAll(Collection<? extends E> c) {
+        for (E e : c) {
+            add(e);
         }
-        return join(", ", e -> e == this ? "(this)" : String.valueOf(e)).format("[%s]").eval();
+        return true;
     }
 
     @Override
-    default int sizeOrDefault() {
-        return size();
-    }
-
-    default boolean isNotEmpty() {
-        return !isEmpty();
-    }
-
-    @Override
-    default boolean isEmpty() {
-        return size() == 0;
+    default boolean addAll(int index, Collection<? extends E> c) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
     default boolean contains(Object o) {
         return indexOf(o) >= 0;
-    }
-
-    @Override
-    default Object[] toArray() {
-        Object[] a = new Object[size()];
-        int i = 0;
-        for (E e : this) {
-            a[i++] = e;
-        }
-        return a;
-    }
-
-    @Override
-    default <T> T[] toArray(T[] a) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    default boolean remove(Object o) {
-        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -66,15 +43,44 @@ public interface AdderList<E> extends Seq<E>, List<E> {
     }
 
     @Override
-    default boolean addAll(Collection<? extends E> c) {
-        for (E e : c) {
-            add(e);
+    default int indexOf(Object o) {
+        int i = 0;
+        for (E e : this) {
+            if (Objects.equals(e, o)) {
+                return i;
+            }
+            i++;
         }
-        return true;
+        return -1;
     }
 
     @Override
-    default boolean addAll(int index, Collection<? extends E> c) {
+    default boolean isEmpty() {
+        return size() == 0;
+    }
+
+    @Override
+    default int lastIndexOf(Object o) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    default ListIterator<E> listIterator() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    default ListIterator<E> listIterator(int index) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    default boolean remove(Object o) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    default E remove(int index) {
         throw new UnsupportedOperationException();
     }
 
@@ -94,44 +100,38 @@ public interface AdderList<E> extends Seq<E>, List<E> {
     }
 
     @Override
-    default void add(int index, E element) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    default E remove(int index) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    default int indexOf(Object o) {
-        int i = 0;
-        for (E e : this) {
-            if (Objects.equals(e, o)) {
-                return i;
-            }
-            i++;
-        }
-        return -1;
-    }
-
-    @Override
-    default int lastIndexOf(Object o) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    default ListIterator<E> listIterator() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    default ListIterator<E> listIterator(int index) {
-        throw new UnsupportedOperationException();
+    default int sizeOrDefault() {
+        return size();
     }
 
     @Override
     default List<E> subList(int fromIndex, int toIndex) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    default <T> T[] toArray(T[] a) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    default Object[] toArray() {
+        Object[] a = new Object[size()];
+        int i = 0;
+        for (E e : this) {
+            a[i++] = e;
+        }
+        return a;
+    }
+
+    default boolean isNotEmpty() {
+        return !isEmpty();
+    }
+
+    default String join() {
+        if (isEmpty()) {
+            return "[]";
+        }
+        return join(", ", e -> e == this ? "(this)" : String.valueOf(e)).format("[%s]").eval();
     }
 }

@@ -11,30 +11,6 @@ public interface IntSeq extends Seq0<IntConsumer> {
     IntSeq empty = c -> {};
     IntConsumer nothing = t -> {};
 
-    static IntSeq of(int... ts) {
-        return c -> {
-            for (int t : ts) {
-                c.accept(t);
-            }
-        };
-    }
-
-    static IntSeq of(CharSequence cs) {
-        return c -> {
-            for (int i = 0; i < cs.length(); i++) {
-                c.accept(cs.charAt(i));
-            }
-        };
-    }
-
-    static IntSeq gen(IntSupplier supplier) {
-        return c -> {
-            while (true) {
-                c.accept(supplier.getAsInt());
-            }
-        };
-    }
-
     static IntSeq gen(int seed, IntUnaryOperator operator) {
         return c -> {
             int t = seed;
@@ -56,8 +32,28 @@ public interface IntSeq extends Seq0<IntConsumer> {
         };
     }
 
-    static IntSeq range(int ub) {
-        return range(0, ub, 1);
+    static IntSeq gen(IntSupplier supplier) {
+        return c -> {
+            while (true) {
+                c.accept(supplier.getAsInt());
+            }
+        };
+    }
+
+    static IntSeq of(CharSequence cs) {
+        return c -> {
+            for (int i = 0; i < cs.length(); i++) {
+                c.accept(cs.charAt(i));
+            }
+        };
+    }
+
+    static IntSeq of(int... ts) {
+        return c -> {
+            for (int t : ts) {
+                c.accept(t);
+            }
+        };
     }
 
     static IntSeq range(int start, int ub) {
@@ -70,6 +66,10 @@ public interface IntSeq extends Seq0<IntConsumer> {
                 c.accept(i);
             }
         };
+    }
+
+    static IntSeq range(int ub) {
+        return range(0, ub, 1);
     }
 
     static IntSeq repeat(int n, int value) {
@@ -267,6 +267,22 @@ public interface IntSeq extends Seq0<IntConsumer> {
         };
     }
 
+    default IntFolder<Integer> foldInt(int init, IntBinaryOperator function) {
+        return new IntFolder<Integer>(this) {
+            int acc = init;
+
+            @Override
+            public Integer get() {
+                return acc;
+            }
+
+            @Override
+            public void accept(int t) {
+                acc = function.applyAsInt(acc, t);
+            }
+        };
+    }
+
     default IntFolder<Boolean> foldBool(boolean init, BooleanIntToBoolean function) {
         return new IntFolder<Boolean>(this) {
             boolean acc = init;
@@ -292,22 +308,6 @@ public interface IntSeq extends Seq0<IntConsumer> {
             consumer.accept(i, t);
             return i + 1;
         });
-    }
-
-    default IntFolder<Integer> foldInt(int init, IntBinaryOperator function) {
-        return new IntFolder<Integer>(this) {
-            int acc = init;
-
-            @Override
-            public Integer get() {
-                return acc;
-            }
-
-            @Override
-            public void accept(int t) {
-                acc = function.applyAsInt(acc, t);
-            }
-        };
     }
 
     default IntSeq forFirst(int n, IntConsumer consumer) {
@@ -408,12 +408,12 @@ public interface IntSeq extends Seq0<IntConsumer> {
         }
     }
 
-    interface IndexIntConsumer {
-        void accept(int i, int t);
-    }
-
     interface BooleanIntToBoolean {
         boolean apply(boolean acc, int t);
+    }
+
+    interface IndexIntConsumer {
+        void accept(int i, int t);
     }
 
     interface ObjIntToObj<E> {

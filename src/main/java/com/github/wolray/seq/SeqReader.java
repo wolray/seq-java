@@ -11,9 +11,33 @@ import java.nio.file.Paths;
 public interface SeqReader<S, T> {
     Seq<T> toSeq(S source) throws Exception;
 
+    static Is<String> text() {
+        return Text.INSTANCE;
+    }
+
     default SafeSeq<T> read(S source) {
         return SafeSeq.of(c -> toSeq(source).supply(c));
     }
+
+    final class Text implements Is<String> {
+        static final Text INSTANCE = new Text();
+
+        @Override
+        public Seq<String> toSeq(InputSource source) {
+            return c -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(source.get()))) {
+                    String s;
+                    while ((s = reader.readLine()) != null) {
+                        c.accept(s);
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            };
+        }
+    }
+
+    interface InputSource extends WithCe.Supplier<InputStream> {}
 
     interface Is<T> extends SeqReader<InputSource, T> {
         default SafeSeq<T> read(URL url) {
@@ -37,29 +61,5 @@ public interface SeqReader<S, T> {
                 return res;
             });
         }
-    }
-
-    interface InputSource extends WithCe.Supplier<InputStream> {}
-
-    final class Text implements Is<String> {
-        static final Text INSTANCE = new Text();
-
-        @Override
-        public Seq<String> toSeq(InputSource source) {
-            return c -> {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(source.get()))) {
-                    String s;
-                    while ((s = reader.readLine()) != null) {
-                        c.accept(s);
-                    }
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            };
-        }
-    }
-
-    static Is<String> text() {
-        return Text.INSTANCE;
     }
 }

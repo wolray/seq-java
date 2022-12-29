@@ -22,11 +22,6 @@ public interface Seq<T> extends Seq0<Consumer<T>>, Transformer<T, T> {
         return this;
     }
 
-    @SuppressWarnings("unchecked")
-    static <T> Seq<T> empty() {
-        return (Seq<T>)Empty.emptySeq;
-    }
-
     static <T> Seq<T> gen(T seed, UnaryOperator<T> operator) {
         return c -> {
             T t = seed;
@@ -46,11 +41,6 @@ public interface Seq<T> extends Seq0<Consumer<T>>, Transformer<T, T> {
                 c.accept(t2 = operator.apply(t1, t1 = t2));
             }
         };
-    }
-
-    @SuppressWarnings("unchecked")
-    static <T> Consumer<T> nothing() {
-        return (Consumer<T>)Empty.nothing;
     }
 
     static <K, V> SeqMap<K, V> of(Map<K, V> map) {
@@ -88,127 +78,4 @@ public interface Seq<T> extends Seq0<Consumer<T>>, Transformer<T, T> {
             }
         };
     }
-
-    @SuppressWarnings("unchecked")
-    default Seq<T> append(T t, T... more) {
-        return c -> {
-            supply(c);
-            c.accept(t);
-            for (T x : more) {
-                c.accept(x);
-            }
-        };
-    }
-
-    default Seq<T> appendAll(Iterable<T> iterable) {
-        return c -> {
-            supply(c);
-            iterable.forEach(c);
-        };
-    }
-
-    default Seq<T> appendWith(Seq<T> seq) {
-        return c -> {
-            supply(c);
-            seq.supply(c);
-        };
-    }
-
-    default Seq<T> cache() {
-        return toBatchList().eval();
-    }
-
-    default Seq<T> cacheBy(Cache<T> cache) {
-        return cacheBy(BatchList.DEFAULT_BATCH_SIZE, cache);
-    }
-
-    default Seq<T> cacheBy(int batchSize, Cache<T> cache) {
-        if (cache.exists()) {
-            return cache.read();
-        } else {
-            Folder<BatchList<T>, T> folder = toBatchList(batchSize);
-            return folder.then(ls -> {
-                if (ls.isNotEmpty()) {
-                    cache.write(ls);
-                }
-            }).eval();
-        }
-    }
-
-    default <E> Seq<E> chunked(int size, ToFolder<E, T> toFolder) {
-        return c -> {
-            IntPair<Folder<E, T>> last = feed(new IntPair<>(0, (Folder<E, T>)null), (p, t) -> {
-                if (p.second == null) {
-                    p.second = toFolder.gen();
-                } else if (p.first >= size) {
-                    c.accept(p.second.get());
-                    p.first = 0;
-                    p.second = toFolder.gen();
-                }
-                p.first++;
-                p.second.accept(t);
-            }).eval();
-            c.accept(last.second.get());
-        };
-    }
-
-    default Seq<SeqList<T>> chunked(int size) {
-        return chunked(size, Transformer::toList);
-    }
-
-    default Seq<T> circle() {
-        return c -> {
-            while (true) {
-                supply(c);
-            }
-        };
-    }
-
-    default Seq<T> duplicateAll(int times) {
-        return c -> {
-            for (int i = 0; i < times; i++) {
-                supply(c);
-            }
-        };
-    }
-
-    default IntSeq mapToInt(ToIntFunction<T> function) {
-        return c -> supply(t -> c.accept(function.applyAsInt(t)));
-    }
-
-    default ParallelSeq<T> parallel() {
-        return this instanceof ParallelSeq ? (ParallelSeq<T>)this : c -> {
-            ForkJoinPool pool = new ForkJoinPool();
-            supply(t -> pool.submit(() -> c.accept(t)));
-        };
-    }
-
-    default void printAll() {
-        printAll(",");
-    }
-
-    default void printAll(String sep) {
-        if ("\n".equals(sep)) {
-            supply(System.out::println);
-        } else {
-            System.out.println(join(sep).eval());
-        }
-    }
-
-    default <E> void zipWith(Iterable<E> es, BiConsumer<T, E> consumer) {
-        tillStop(feed(es.iterator(), (itr, t) -> {
-            if (itr.hasNext()) {
-                consumer.accept(t, itr.next());
-            } else {
-                Seq0.stop();
-            }
-        }));
-    }
-
-    class Empty {
-        static Seq<Object> emptySeq = c -> {};
-        static Consumer<Object> nothing = t -> {};
-    }
-
-    interface ParallelSeq<T> extends Seq<T> {}
 }

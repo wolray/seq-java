@@ -1,6 +1,7 @@
 package com.github.wolray.seq;
 
 import java.util.*;
+import java.util.concurrent.ForkJoinPool;
 import java.util.function.*;
 
 /**
@@ -9,6 +10,16 @@ import java.util.function.*;
 public interface Transformer<S, T> {
     Seq<S> source();
     Consumer<S> apply(Consumer<T> c);
+
+    @SuppressWarnings("unchecked")
+    static <T> Seq<T> empty() {
+        return (Seq<T>)Empty.emptySeq;
+    }
+
+    @SuppressWarnings("unchecked")
+    static <T> Consumer<T> nothing() {
+        return (Consumer<T>)Empty.nothing;
+    }
 
     default Folder<Boolean, S> all(Predicate<T> predicate) {
         return any(false, predicate.negate());
@@ -24,6 +35,34 @@ public interface Transformer<S, T> {
 
     default Folder<Boolean, S> anyNot(Predicate<T> predicate) {
         return any(predicate.negate());
+    }
+
+    @SuppressWarnings("unchecked")
+    default Seq<T> append(T t, T... more) {
+        Seq<T> seq = commit();
+        return c -> {
+            seq.supply(c);
+            c.accept(t);
+            for (T x : more) {
+                c.accept(x);
+            }
+        };
+    }
+
+    default Seq<T> appendAll(Iterable<T> iterable) {
+        Seq<T> seq = commit();
+        return c -> {
+            seq.supply(c);
+            iterable.forEach(c);
+        };
+    }
+
+    default Seq<T> appendWith(Seq<T> seq) {
+        Seq<T> s = commit();
+        return c -> {
+            s.supply(c);
+            seq.supply(c);
+        };
     }
 
     default void assertTo(String s) {
@@ -55,6 +94,56 @@ public interface Transformer<S, T> {
             };
         }
         return feed(new double[]{0, 0}, biConsumer).map(a -> a[1] != 0 ? a[0] / a[1] : 0);
+    }
+
+    default Seq<T> cache() {
+        return toBatchList().eval();
+    }
+
+    default Seq<T> cacheBy(Cache<T> cache) {
+        return cacheBy(BatchList.DEFAULT_BATCH_SIZE, cache);
+    }
+
+    default Seq<T> cacheBy(int batchSize, Cache<T> cache) {
+        if (cache.exists()) {
+            return cache.read();
+        } else {
+            return toBatchList(batchSize).then(ls -> {
+                if (ls.isNotEmpty()) {
+                    cache.write(ls);
+                }
+            }).eval();
+        }
+    }
+
+    default <E> Seq<E> chunked(int size, ToFolder<E, T> toFolder) {
+        return c -> {
+            IntPair<Folder<E, T>> last = feed(new IntPair<>(0, (Folder<E, T>)null), (p, t) -> {
+                if (p.second == null) {
+                    p.second = toFolder.gen();
+                } else if (p.first >= size) {
+                    c.accept(p.second.get());
+                    p.first = 0;
+                    p.second = toFolder.gen();
+                }
+                p.first++;
+                p.second.accept(t);
+            }).eval();
+            c.accept(last.second.get());
+        };
+    }
+
+    default Seq<SeqList<T>> chunked(int size) {
+        return chunked(size, Transformer::toList);
+    }
+
+    default Seq<T> circle() {
+        Seq<T> seq = commit();
+        return c -> {
+            while (true) {
+                seq.supply(c);
+            }
+        };
     }
 
     default <C extends Collection<T>> Folder<C, S> collect(C des) {
@@ -94,7 +183,7 @@ public interface Transformer<S, T> {
     }
 
     default Transformer<S, T> drop(int n) {
-        return forFirst(n, Seq.nothing());
+        return forFirst(n, nothing());
     }
 
     default Transformer<S, T> dropWhile(Predicate<T> predicate) {
@@ -105,6 +194,15 @@ public interface Transformer<S, T> {
             }
             return false;
         }));
+    }
+
+    default Seq<T> duplicateAll(int times) {
+        Seq<T> seq = commit();
+        return c -> {
+            for (int i = 0; i < times; i++) {
+                seq.supply(c);
+            }
+        };
     }
 
     default Transformer<S, T> duplicateEach(int times) {
@@ -219,7 +317,7 @@ public interface Transformer<S, T> {
     }
 
     default Folder<Integer, S> foldInt(int init, IntObjToInt<T> function) {
-        return mappingFolder(new Folder<Integer, T>(Seq.empty()) {
+        return mappingFolder(new Folder<Integer, T>(empty()) {
             int acc = init;
 
             @Override
@@ -235,7 +333,7 @@ public interface Transformer<S, T> {
     }
 
     default Folder<Double, S> foldDouble(double init, DoubleObjToDouble<T> function) {
-        return mappingFolder(new Folder<Double, T>(Seq.empty()) {
+        return mappingFolder(new Folder<Double, T>(empty()) {
             double acc = init;
 
             @Override
@@ -251,7 +349,7 @@ public interface Transformer<S, T> {
     }
 
     default Folder<Long, S> foldLong(long init, LongObjToLong<T> function) {
-        return mappingFolder(new Folder<Long, T>(Seq.empty()) {
+        return mappingFolder(new Folder<Long, T>(empty()) {
             long acc = init;
 
             @Override
@@ -267,7 +365,7 @@ public interface Transformer<S, T> {
     }
 
     default Folder<Boolean, S> foldBoolean(boolean init, BooleanObjToBoolean<T> function) {
-        return mappingFolder(new Folder<Boolean, T>(Seq.empty()) {
+        return mappingFolder(new Folder<Boolean, T>(empty()) {
             boolean acc = init;
 
             @Override
@@ -423,6 +521,11 @@ public interface Transformer<S, T> {
         return mapSub(first::equals, last::equals, function);
     }
 
+    default IntSeq mapToInt(ToIntFunction<T> function) {
+        Seq<T> seq = commit();
+        return c -> seq.supply(t -> c.accept(function.applyAsInt(t)));
+    }
+
     default Folder<T, S> max(Comparator<T> comparator) {
         return fold(null, (f, t) -> f == null || comparator.compare(f, t) < 0 ? t : f);
     }
@@ -494,6 +597,14 @@ public interface Transformer<S, T> {
         return map(t -> new Pair<>(t, function.apply(t)));
     }
 
+    default ParallelSeq<T> parallel() {
+        Seq<T> seq = commit();
+        return this instanceof ParallelSeq ? (ParallelSeq<T>)this : c -> {
+            ForkJoinPool pool = new ForkJoinPool();
+            seq.supply(t -> pool.submit(() -> c.accept(t)));
+        };
+    }
+
     default <E> Folder<Pair<E, E>, S> partition(Predicate<T> predicate, ToFolder<E, T> toFolder) {
         return feed(new Pair<>(toFolder.gen(), toFolder.gen()), (p, t) ->
             (predicate.test(t) ? p.first : p.second).accept(t))
@@ -502,6 +613,18 @@ public interface Transformer<S, T> {
 
     default Folder<Pair<BatchList<T>, BatchList<T>>, S> partition(Predicate<T> predicate) {
         return partition(predicate, Transformer::toBatchList);
+    }
+
+    default void printAll() {
+        printAll(",");
+    }
+
+    default void printAll(String sep) {
+        if ("\n".equals(sep)) {
+            commit().supply(System.out::println);
+        } else {
+            System.out.println(join(sep).eval());
+        }
     }
 
     default Folder<SeqList<T>, S> reverse() {
@@ -732,11 +855,21 @@ public interface Transformer<S, T> {
         return zip(iterable, Pair::new);
     }
 
+    default <E> void zipWith(Iterable<E> es, BiConsumer<T, E> consumer) {
+        source().tillStop(feed(es.iterator(), (itr, t) -> {
+            if (itr.hasNext()) {
+                consumer.accept(t, itr.next());
+            } else {
+                Seq0.stop();
+            }
+        }));
+    }
+
     abstract class AccFolder<E, T> extends Folder<E, T> {
         protected E acc;
 
         public AccFolder(E init) {
-            super(Seq.empty());
+            super(empty());
             acc = init;
         }
 
@@ -744,6 +877,11 @@ public interface Transformer<S, T> {
         public E get() {
             return acc;
         }
+    }
+
+    class Empty {
+        static Seq<Object> emptySeq = c -> {};
+        static Consumer<Object> nothing = t -> {};
     }
 
     interface IntObjToInt<T> {
@@ -770,9 +908,11 @@ public interface Transformer<S, T> {
         E apply(int i, T t);
     }
 
+    interface ParallelSeq<T> extends Seq<T> {}
+
     interface ToFolder<E, T> extends Function<Seq<T>, Folder<E, T>> {
         default Folder<E, T> gen() {
-            return apply(Seq.empty());
+            return apply(empty());
         }
     }
 }

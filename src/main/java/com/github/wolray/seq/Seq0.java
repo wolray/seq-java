@@ -6,14 +6,14 @@ package com.github.wolray.seq;
 public interface Seq0<C> {
     void supply(C consumer);
 
+    static <T> T stop() {
+        throw StopException.INSTANCE;
+    }
+
     default void tillStop(C consumer) {
         try {
             supply(consumer);
         } catch (StopException ignore) {}
-    }
-
-    static <T> T stop() {
-        throw StopException.INSTANCE;
     }
 
     class StopException extends RuntimeException {
