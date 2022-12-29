@@ -218,12 +218,12 @@ public interface Transformer<S, T> {
         });
     }
 
-    default Folder<Boolean, S> foldBoolean(boolean init, BooleanObjToBoolean<T> function) {
-        return mappingFolder(new Folder<Boolean, T>(Seq.empty()) {
-            boolean acc = init;
+    default Folder<Integer, S> foldInt(int init, IntObjToInt<T> function) {
+        return mappingFolder(new Folder<Integer, T>(Seq.empty()) {
+            int acc = init;
 
             @Override
-            public Boolean get() {
+            public Integer get() {
                 return acc;
             }
 
@@ -250,33 +250,6 @@ public interface Transformer<S, T> {
         });
     }
 
-    default Folder<Integer, S> foldIndexed(IndexObjConsumer<T> consumer) {
-        return foldIndexed(0, consumer);
-    }
-
-    default Folder<Integer, S> foldIndexed(int start, IndexObjConsumer<T> consumer) {
-        return foldInt(start, (i, t) -> {
-            consumer.accept(i, t);
-            return i + 1;
-        });
-    }
-
-    default Folder<Integer, S> foldInt(int init, IntObjToInt<T> function) {
-        return mappingFolder(new Folder<Integer, T>(Seq.empty()) {
-            int acc = init;
-
-            @Override
-            public Integer get() {
-                return acc;
-            }
-
-            @Override
-            public void accept(T t) {
-                acc = function.apply(acc, t);
-            }
-        });
-    }
-
     default Folder<Long, S> foldLong(long init, LongObjToLong<T> function) {
         return mappingFolder(new Folder<Long, T>(Seq.empty()) {
             long acc = init;
@@ -290,6 +263,33 @@ public interface Transformer<S, T> {
             public void accept(T t) {
                 acc = function.apply(acc, t);
             }
+        });
+    }
+
+    default Folder<Boolean, S> foldBoolean(boolean init, BooleanObjToBoolean<T> function) {
+        return mappingFolder(new Folder<Boolean, T>(Seq.empty()) {
+            boolean acc = init;
+
+            @Override
+            public Boolean get() {
+                return acc;
+            }
+
+            @Override
+            public void accept(T t) {
+                acc = function.apply(acc, t);
+            }
+        });
+    }
+
+    default Folder<Integer, S> foldIndexed(IndexObjConsumer<T> consumer) {
+        return foldIndexed(0, consumer);
+    }
+
+    default Folder<Integer, S> foldIndexed(int start, IndexObjConsumer<T> consumer) {
+        return foldInt(start, (i, t) -> {
+            consumer.accept(i, t);
+            return i + 1;
         });
     }
 
@@ -600,22 +600,10 @@ public interface Transformer<S, T> {
         return takeWhile(t -> t, Objects::equals);
     }
 
-    default Folder<ArrayList<T>, S> toArrayList() {
-        return collectBy(ArrayList::new);
-    }
-
-    default Folder<BatchList<T>, S> toBatchList() {
-        return collect(new BatchList<>());
-    }
-
-    default Folder<BatchList<T>, S> toBatchList(int batchSize) {
-        return collect(new BatchList<>(batchSize));
-    }
-
-    default Folder<boolean[], S> toBooleanArray(Predicate<T> function) {
+    default Folder<int[], S> toIntArray(ToIntFunction<T> function) {
         return toBatchList().map(ls -> {
-            boolean[] a = new boolean[ls.size()];
-            ls.supply(ls.foldIndexed((i, t) -> a[i] = function.test(t)));
+            int[] a = new int[ls.size()];
+            ls.supply(ls.foldIndexed((i, t) -> a[i] = function.applyAsInt(t)));
             return a;
         });
     }
@@ -628,24 +616,36 @@ public interface Transformer<S, T> {
         });
     }
 
-    default Folder<int[], S> toIntArray(ToIntFunction<T> function) {
-        return toBatchList().map(ls -> {
-            int[] a = new int[ls.size()];
-            ls.supply(ls.foldIndexed((i, t) -> a[i] = function.applyAsInt(t)));
-            return a;
-        });
-    }
-
-    default Folder<SeqList<T>, S> toList() {
-        return collectBy(ArrayList::new).map(SeqList::new);
-    }
-
     default Folder<long[], S> toLongArray(ToLongFunction<T> function) {
         return toBatchList().map(ls -> {
             long[] a = new long[ls.size()];
             ls.supply(ls.foldIndexed((i, t) -> a[i] = function.applyAsLong(t)));
             return a;
         });
+    }
+
+    default Folder<boolean[], S> toBooleanArray(Predicate<T> function) {
+        return toBatchList().map(ls -> {
+            boolean[] a = new boolean[ls.size()];
+            ls.supply(ls.foldIndexed((i, t) -> a[i] = function.test(t)));
+            return a;
+        });
+    }
+
+    default Folder<ArrayList<T>, S> toArrayList() {
+        return collectBy(ArrayList::new);
+    }
+
+    default Folder<BatchList<T>, S> toBatchList() {
+        return collect(new BatchList<>());
+    }
+
+    default Folder<BatchList<T>, S> toBatchList(int batchSize) {
+        return collect(new BatchList<>(batchSize));
+    }
+
+    default Folder<SeqList<T>, S> toList() {
+        return collectBy(ArrayList::new).map(SeqList::new);
     }
 
     default <K, V> Folder<Map<K, V>, S> toMap(Map<K, V> des, Function<T, K> kFunction, Function<T, V> vFunction) {
@@ -688,20 +688,20 @@ public interface Transformer<S, T> {
         return collect(new SinglyList<>());
     }
 
-    default Transformer<S, IntPair<T>> withIndex() {
-        return withIndex(0);
-    }
-
-    default Transformer<S, IntPair<T>> withIndex(int start) {
-        return mapping(c -> foldIndexed(start, (i, t) -> c.accept(new IntPair<>(i, t))));
-    }
-
     default Transformer<S, IntPair<T>> withInt(ToIntFunction<T> function) {
         return map(t -> new IntPair<>(function.applyAsInt(t), t));
     }
 
     default Transformer<S, LongPair<T>> withLong(ToLongFunction<T> function) {
         return map(t -> new LongPair<>(function.applyAsLong(t), t));
+    }
+
+    default Transformer<S, IntPair<T>> withIndex() {
+        return withIndex(0);
+    }
+
+    default Transformer<S, IntPair<T>> withIndex(int start) {
+        return mapping(c -> foldIndexed(start, (i, t) -> c.accept(new IntPair<>(i, t))));
     }
 
     default <B, C> Transformer<S, Triple<T, B, C>> zip(Iterable<B> bs, Iterable<C> cs) {
@@ -732,12 +732,6 @@ public interface Transformer<S, T> {
         return zip(iterable, Pair::new);
     }
 
-    interface ToFolder<E, T> extends Function<Seq<T>, Folder<E, T>> {
-        default Folder<E, T> gen() {
-            return apply(Seq.empty());
-        }
-    }
-
     abstract class AccFolder<E, T> extends Folder<E, T> {
         protected E acc;
 
@@ -750,14 +744,6 @@ public interface Transformer<S, T> {
         public E get() {
             return acc;
         }
-    }
-
-    interface IndexObjConsumer<T> {
-        void accept(int i, T t);
-    }
-
-    interface IndexObjFunction<T, E> {
-        E apply(int i, T t);
     }
 
     interface IntObjToInt<T> {
@@ -774,5 +760,19 @@ public interface Transformer<S, T> {
 
     interface BooleanObjToBoolean<T> {
         boolean apply(boolean acc, T t);
+    }
+
+    interface IndexObjConsumer<T> {
+        void accept(int i, T t);
+    }
+
+    interface IndexObjFunction<T, E> {
+        E apply(int i, T t);
+    }
+
+    interface ToFolder<E, T> extends Function<Seq<T>, Folder<E, T>> {
+        default Folder<E, T> gen() {
+            return apply(Seq.empty());
+        }
     }
 }

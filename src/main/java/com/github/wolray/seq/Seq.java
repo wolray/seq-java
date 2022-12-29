@@ -13,41 +13,18 @@ public interface Seq<T> extends Seq0<Consumer<T>>, Transformer<T, T> {
     void supply(Consumer<T> consumer);
 
     @Override
-    default Seq<T> source() {
-        return this;
-    }
-
-    @Override
     default Consumer<T> apply(Consumer<T> c) {
         return c;
     }
 
-    @SafeVarargs
-    static <T> Seq<T> of(T... ts) {
-        return of(Arrays.asList(ts));
+    @Override
+    default Seq<T> source() {
+        return this;
     }
 
-    static <T> Seq<T> of(Iterable<T> iterable) {
-        return iterable instanceof Collection
-            ? new BackedSeq<>((Collection<T>)iterable)
-            : iterable::forEach;
-    }
-
-    static <K, V> SeqMap<K, V> of(Map<K, V> map) {
-        return SeqMap.of(map);
-    }
-
-    static <N> Seq<N> ofTree(N node, Function<N, Seq<N>> sub) {
-        return c -> SeqUtil.scanTree(c, node, sub);
-    }
-
-    static <T> Seq<T> tillNull(Supplier<T> supplier) {
-        return c -> {
-            T t;
-            while ((t = supplier.get()) != null) {
-                c.accept(t);
-            }
-        };
+    @SuppressWarnings("unchecked")
+    static <T> Seq<T> empty() {
+        return (Seq<T>)Empty.emptySeq;
     }
 
     static <T> Seq<T> gen(T seed, UnaryOperator<T> operator) {
@@ -71,9 +48,42 @@ public interface Seq<T> extends Seq0<Consumer<T>>, Transformer<T, T> {
         };
     }
 
+    @SuppressWarnings("unchecked")
+    static <T> Consumer<T> nothing() {
+        return (Consumer<T>)Empty.nothing;
+    }
+
+    static <K, V> SeqMap<K, V> of(Map<K, V> map) {
+        return SeqMap.of(map);
+    }
+
+    static <T> Seq<T> of(Iterable<T> iterable) {
+        return iterable instanceof Collection
+            ? new BackedSeq<>((Collection<T>)iterable)
+            : iterable::forEach;
+    }
+
+    @SafeVarargs
+    static <T> Seq<T> of(T... ts) {
+        return of(Arrays.asList(ts));
+    }
+
+    static <N> Seq<N> ofTree(N node, Function<N, Seq<N>> sub) {
+        return c -> SeqUtil.scanTree(c, node, sub);
+    }
+
     static <T> Seq<T> repeat(int n, T t) {
         return c -> {
             for (int i = 0; i < n; i++) {
+                c.accept(t);
+            }
+        };
+    }
+
+    static <T> Seq<T> tillNull(Supplier<T> supplier) {
+        return c -> {
+            T t;
+            while ((t = supplier.get()) != null) {
                 c.accept(t);
             }
         };
@@ -198,16 +208,6 @@ public interface Seq<T> extends Seq0<Consumer<T>>, Transformer<T, T> {
     class Empty {
         static Seq<Object> emptySeq = c -> {};
         static Consumer<Object> nothing = t -> {};
-    }
-
-    @SuppressWarnings("unchecked")
-    static <T> Seq<T> empty() {
-        return (Seq<T>)Empty.emptySeq;
-    }
-
-    @SuppressWarnings("unchecked")
-    static <T> Consumer<T> nothing() {
-        return (Consumer<T>)Empty.nothing;
     }
 
     interface ParallelSeq<T> extends Seq<T> {}
