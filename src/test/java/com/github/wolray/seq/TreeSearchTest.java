@@ -44,7 +44,7 @@ public class TreeSearchTest {
     }
 
     private int eval(int[] a) {
-        return IntSeq.of(a).boxed().mapPair(false, (t1, t2) -> t2).sumInt(t -> t);
+        return IntSeq.of(a).filter((i, t) -> (i & 1) > 0).sum(t -> t);
     }
 
     @Test

@@ -209,6 +209,14 @@ public interface IntSeq extends Seq0<IntConsumer> {
         });
     }
 
+    default IntSeq filter(IndexIntPredicate predicate) {
+        return c -> foldIndexed((i, t) -> {
+            if (predicate.test(i, t)) {
+                c.accept(t);
+            }
+        });
+    }
+
     default IntSeq filter(IntPredicate predicate) {
         return c -> supply(t -> {
             if (predicate.test(t)) {
@@ -309,12 +317,12 @@ public interface IntSeq extends Seq0<IntConsumer> {
         return last(predicate.negate());
     }
 
-    default IntSeq map(IntUnaryOperator function) {
-        return c -> supply(t -> c.accept(function.applyAsInt(t)));
+    default IntSeq map(IntBinaryOperator function) {
+        return c -> foldIndexed((i, t) -> c.accept(function.applyAsInt(i, t)));
     }
 
-    default IntSeq mapIndexed(IntBinaryOperator function) {
-        return c -> foldIndexed((i, t) -> c.accept(function.applyAsInt(i, t)));
+    default IntSeq map(IntUnaryOperator function) {
+        return c -> supply(t -> c.accept(function.applyAsInt(t)));
     }
 
     default <E> Seq<E> mapToObj(IntFunction<E> function) {
@@ -390,6 +398,10 @@ public interface IntSeq extends Seq0<IntConsumer> {
 
     interface IndexIntConsumer {
         void accept(int i, int t);
+    }
+
+    interface IndexIntPredicate {
+        boolean test(int i, int t);
     }
 
     interface ObjIntToObj<E> {

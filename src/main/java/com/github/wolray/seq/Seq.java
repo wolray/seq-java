@@ -59,7 +59,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return c -> SeqUtil.scanTree(c, node, sub);
     }
 
-    static <N> ParallelSeq<N> ofTreeParallel(N root, Function<N, Seq<N>> sub) {
+    static <N> Seq<N> ofTreeParallel(N root, Function<N, Seq<N>> sub) {
         return c -> SeqUtil.scanTreeParallel(c, new ForkJoinPool(), root, sub);
     }
 
@@ -283,6 +283,14 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return des;
     }
 
+    default Seq<T> filter(IndexObjPredicate<T> predicate) {
+        return c -> foldIndexed((i, t) -> {
+            if (predicate.test(i, t)) {
+                c.accept(t);
+            }
+        });
+    }
+
     default Seq<T> filter(Predicate<T> predicate) {
         return c -> supply(t -> {
             if (predicate.test(t)) {
@@ -438,11 +446,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return c -> supply(t -> c.accept(function.apply(t)));
     }
 
-    default <E> Seq<E> mapCe(WithCe.Function<T, E> function) {
-        return map(WithCe.mapper(function));
-    }
-
-    default <E> Seq<E> mapIndexed(IndexObjFunction<T, E> function) {
+    default <E> Seq<E> map(IndexObjFunction<T, E> function) {
         return c -> foldIndexed((i, t) -> c.accept(function.apply(i, t)));
     }
 
@@ -572,8 +576,8 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return map(t -> new Pair<>(t, function.apply(t)));
     }
 
-    default ParallelSeq<T> parallel() {
-        return this instanceof ParallelSeq ? (ParallelSeq<T>)this : c -> {
+    default Seq<T> parallel() {
+        return c -> {
             ForkJoinPool pool = new ForkJoinPool();
             map(t -> pool.submit(() -> c.accept(t)))
                 .cache()
@@ -864,5 +868,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         E apply(int i, T t);
     }
 
-    interface ParallelSeq<T> extends Seq<T> {}
+    interface IndexObjPredicate<T> {
+        boolean test(int i, T t);
+    }
 }
