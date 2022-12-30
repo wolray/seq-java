@@ -283,14 +283,6 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return des;
     }
 
-    default Seq<T> filter(IndexObjPredicate<T> predicate) {
-        return c -> foldIndexed((i, t) -> {
-            if (predicate.test(i, t)) {
-                c.accept(t);
-            }
-        });
-    }
-
     default Seq<T> filter(Predicate<T> predicate) {
         return c -> supply(t -> {
             if (predicate.test(t)) {
@@ -305,6 +297,14 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
 
     default Seq<T> filterIn(Map<T, ?> map) {
         return filter(map::containsKey);
+    }
+
+    default Seq<T> filterIndexed(IndexObjPredicate<T> predicate) {
+        return c -> foldIndexed((i, t) -> {
+            if (predicate.test(i, t)) {
+                c.accept(t);
+            }
+        });
     }
 
     default Seq<T> filterNot(Predicate<T> predicate) {
@@ -446,7 +446,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return c -> supply(t -> c.accept(function.apply(t)));
     }
 
-    default <E> Seq<E> map(IndexObjFunction<T, E> function) {
+    default <E> Seq<E> mapIndexed(IndexObjFunction<T, E> function) {
         return c -> foldIndexed((i, t) -> c.accept(function.apply(i, t)));
     }
 
