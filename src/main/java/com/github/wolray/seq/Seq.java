@@ -304,15 +304,14 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
     }
 
     default <E> E find(E ifNotFound, Predicate<T> predicate, Function<T, E> function) {
-        return new AccFolder<E, T>(ifNotFound) {
-            @Override
-            public void accept(T t) {
-                if (predicate.test(t)) {
-                    acc = function.apply(t);
-                    Seq0.stop();
-                }
+        Mutable<E> m = new Mutable<>(ifNotFound);
+        tillStop(t -> {
+            if (predicate.test(t)) {
+                m.it = function.apply(t);
+                Seq0.stop();
             }
-        }.eval(this);
+        });
+        return m.it;
     }
 
     default T first() {
@@ -345,43 +344,40 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
     }
 
     default <E> E fold(E init, BiFunction<E, T, E> function) {
-        return new AccFolder<E, T>(init) {
-            @Override
-            public void accept(T t) {
-                acc = function.apply(acc, t);
-            }
-        }.eval(this);
+        Mutable<E> m = new Mutable<>(init);
+        supply(t -> m.it = function.apply(m.it, t));
+        return m.it;
     }
 
-    default Integer foldInt(int init, IntObjToInt<T> function) {
+    default int foldInt(int init, IntObjToInt<T> function) {
         int[] a = new int[]{init};
         tillStop(t -> a[0] = function.apply(a[0], t));
         return a[0];
     }
 
-    default Double foldDouble(double init, DoubleObjToDouble<T> function) {
+    default double foldDouble(double init, DoubleObjToDouble<T> function) {
         double[] a = new double[]{init};
         tillStop(t -> a[0] = function.apply(a[0], t));
         return a[0];
     }
 
-    default Long foldLong(long init, LongObjToLong<T> function) {
+    default long foldLong(long init, LongObjToLong<T> function) {
         long[] a = new long[]{init};
         tillStop(t -> a[0] = function.apply(a[0], t));
         return a[0];
     }
 
-    default Boolean foldBoolean(boolean init, BooleanObjToBoolean<T> function) {
+    default boolean foldBoolean(boolean init, BooleanObjToBoolean<T> function) {
         boolean[] a = new boolean[]{init};
         tillStop(t -> a[0] = function.apply(a[0], t));
         return a[0];
     }
 
-    default Integer foldIndexed(IndexObjConsumer<T> consumer) {
+    default int foldIndexed(IndexObjConsumer<T> consumer) {
         return foldIndexed(0, consumer);
     }
 
-    default Integer foldIndexed(int start, IndexObjConsumer<T> consumer) {
+    default int foldIndexed(int start, IndexObjConsumer<T> consumer) {
         return foldInt(start, (i, t) -> {
             consumer.accept(i, t);
             return i + 1;
@@ -397,14 +393,21 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
     }
 
     default <K, V> SeqMap<K, BatchList<V>> groupBy(Function<T, K> kFunction, Function<T, V> vFunction) {
-        return groupBy(new HashMap<>(), kFunction, vFunction);
+        return groupByFeed(kFunction, BatchList::new, (ls, t) -> ls.add(vFunction.apply(t)));
     }
 
-    default <K, V> SeqMap<K, BatchList<V>> groupBy(Map<K, BatchList<V>> map,
-        Function<T, K> kFunction, Function<T, V> vFunction) {
-        Function<K, BatchList<V>> mappingFunction = k -> new BatchList<>();
-        feed(map, (m, t) -> m.computeIfAbsent(kFunction.apply(t), mappingFunction)
-            .add(vFunction.apply(t)));
+    default <K, V> SeqMap<K, V> groupByFold(Function<T, K> kFunction, Supplier<V> init, BiFunction<V, T, V> folder) {
+        Map<K, Mutable<V>> map = groupByFeed(kFunction, () -> new Mutable<>(init.get()),
+            (m, t) -> m.it = folder.apply(m.it, t));
+        return new SeqMap<>(map).replaceValue(m -> m.it);
+    }
+
+    default <K, V> SeqMap<K, V> groupByFeed(Function<T, K> kFunction, Supplier<V> des, BiConsumer<V, T> feeder) {
+        Function<K, V> mappingFunction = k -> des.get();
+        Map<K, V> map = feed(new HashMap<>(), (m, t) -> {
+            V v = m.computeIfAbsent(kFunction.apply(t), mappingFunction);
+            feeder.accept(v, t);
+        });
         return new SeqMap<>(map);
     }
 
@@ -565,6 +568,17 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
     default Pair<BatchList<T>, BatchList<T>> partition(Predicate<T> predicate) {
         return feed(new Pair<>(new BatchList<>(), new BatchList<>()), (p, t) ->
             (predicate.test(t) ? p.first : p.second).add(t));
+    }
+
+    default <E> Pair<E, E> partitionByFeed(Predicate<T> predicate, Supplier<E> supplier, BiConsumer<E, T> consumer) {
+        return feed(new Pair<>(supplier.get(), supplier.get()), (p, t) ->
+            consumer.accept((predicate.test(t) ? p.first : p.second), t));
+    }
+
+    default <E> Pair<E, E> partitionByFold(Predicate<T> predicate, E init, BiFunction<E, T, E> function) {
+        Pair<Mutable<E>, Mutable<E>> pair = partitionByFeed(predicate, () -> new Mutable<>(init),
+            (m, t) -> m.it = function.apply(m.it, t));
+        return new Pair<>(pair.first.it, pair.second.it);
     }
 
     default void printAll() {
@@ -814,19 +828,6 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
                 Seq0.stop();
             }
         });
-    }
-
-    abstract class AccFolder<E, T> extends Folder<E, T> {
-        protected E acc;
-
-        public AccFolder(E init) {
-            acc = init;
-        }
-
-        @Override
-        public E get() {
-            return acc;
-        }
     }
 
     class Empty {

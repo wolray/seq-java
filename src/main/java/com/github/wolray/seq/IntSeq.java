@@ -80,19 +80,19 @@ public interface IntSeq extends Seq0<IntConsumer> {
         };
     }
 
-    default IntFolder<Boolean> all(IntPredicate predicate) {
+    default boolean all(IntPredicate predicate) {
         return any(false, predicate.negate());
     }
 
-    default IntFolder<Boolean> any(boolean ifFound, IntPredicate predicate) {
+    default boolean any(boolean ifFound, IntPredicate predicate) {
         return find(!ifFound, predicate, t -> ifFound);
     }
 
-    default IntFolder<Boolean> any(IntPredicate predicate) {
+    default boolean any(IntPredicate predicate) {
         return any(true, predicate);
     }
 
-    default IntFolder<Boolean> anyNot(IntPredicate predicate) {
+    default boolean anyNot(IntPredicate predicate) {
         return any(predicate.negate());
     }
 
@@ -221,27 +221,26 @@ public interface IntSeq extends Seq0<IntConsumer> {
         return filter(predicate.negate());
     }
 
-    default <E> IntFolder<E> find(E ifNotFound, IntPredicate predicate, IntFunction<E> function) {
-        return new IntFolder<E>(ifNotFound) {
-            @Override
-            public void accept(int t) {
-                if (predicate.test(t)) {
-                    acc = function.apply(t);
-                    Seq0.stop();
-                }
+    default <E> E find(E ifNotFound, IntPredicate predicate, IntFunction<E> function) {
+        Mutable<E> m = new Mutable<>(ifNotFound);
+        tillStop(t -> {
+            if (predicate.test(t)) {
+                m.it = function.apply(t);
+                Seq0.stop();
             }
-        };
+        });
+        return m.it;
     }
 
-    default IntFolder<Integer> first() {
+    default Integer first() {
         return find(null, t -> true, t -> t);
     }
 
-    default IntFolder<Integer> first(IntPredicate predicate) {
+    default Integer first(IntPredicate predicate) {
         return find(null, predicate, t -> t);
     }
 
-    default IntFolder<Integer> firstNot(IntPredicate predicate) {
+    default Integer firstNot(IntPredicate predicate) {
         return first(predicate.negate());
     }
 
@@ -250,12 +249,9 @@ public interface IntSeq extends Seq0<IntConsumer> {
     }
 
     default <E> E fold(E init, ObjIntToObj<E> function) {
-        return new IntFolder<E>(init) {
-            @Override
-            public void accept(int t) {
-                acc = function.apply(acc, t);
-            }
-        }.eval(this);
+        Mutable<E> m = new Mutable<>(init);
+        tillStop(t -> m.it = function.apply(m.it, t));
+        return m.it;
     }
 
     default int foldInt(int init, IntBinaryOperator function) {
@@ -329,7 +325,7 @@ public interface IntSeq extends Seq0<IntConsumer> {
         return fold(null, (f, t) -> f == null || f > t ? t : f);
     }
 
-    default IntFolder<Boolean> none(IntPredicate predicate) {
+    default boolean none(IntPredicate predicate) {
         return any(false, predicate);
     }
 
@@ -378,24 +374,6 @@ public interface IntSeq extends Seq0<IntConsumer> {
                 Seq0.stop();
             }
         });
-    }
-
-    abstract class IntFolder<E> implements IntConsumer, Supplier<E> {
-        protected E acc;
-
-        public IntFolder(E acc) {
-            this.acc = acc;
-        }
-
-        public E eval(IntSeq seq) {
-            seq.tillStop(this);
-            return get();
-        }
-
-        @Override
-        public E get() {
-            return acc;
-        }
     }
 
     interface LongIntToLong {
