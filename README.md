@@ -320,6 +320,6 @@ Then add the dependency.
 <dependency>
     <groupId>com.github.wolray</groupId>
     <artifactId>seq-java</artifactId>
-    <version>1.3.0</version>
+    <version>1.3.1</version>
 </dependency>
 ```
