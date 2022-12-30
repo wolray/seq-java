@@ -187,18 +187,15 @@ seq = seq.onLast(System.out::println); // same as old but also (lazily) println 
 #### cache
 Though `Seq` is always resuable unlike disposable Java `Stream`, it might be high-cost sometimes (usually from IO). You can cache it for once then use it anywhere else.
 ```java
-seq = seq.cache().eval();
+seq = seq.cache();
 ```
 #### parallel
 Same as Java `stream.parallel` to create a new parallelized `seq`, usually for multiple IO tasks.
 ```java
-seq = seq.parallel().eval();
+seq = seq.parallel();
 ```
 ### Terminal operations
-Like any other streaming API, a `seq` is not evaluated until calling terminal operations. However, there is an extra abstraction layer between those operations and the real outputs. It is called `Folder`.
-
-With `Folder`, most termination operators returns a `Folder` instance, which is still lazy. The final output is only computed when the `eval()` method is called.
-
+Like any other streaming API, a `seq` is not evaluated until calling terminal operations.
 
 #### supply
 Same as Java `stream.forEach` and Kotlin `sequence.forEach`.
@@ -208,101 +205,100 @@ seq.supply(System.out::println);
 #### fold
 Same as Kotlin `sequence.fold` and a little like Java `stream.reduce`.
 ```java
-Integer sum = seq.fold(0, (acc, i) -> acc + i).eval(); // sum by folding each element with initial 0
+Integer sum1 = seq.fold(0, (acc, i) -> acc + i); // sum by folding each element with initial 0
+int sum2 = seq.foldInt(0, (acc, i) -> acc + i); // sum by folding each element with initial 0
 ```
 #### foldIndexed
 Same as Kotlin `sequence.forEachIndexed`.
 ```java
-seq.foldIndexed((index, i) -> System.out.println(index + " " + i)).eval();
+seq.foldIndexed((index, i) -> System.out.println(index + " " + i));
 ```
 #### feed
 Giving a destination then feed all elements to it. Works like `fold` but requires a `BiConsumer` rather than `BiFunction`.
 ```java
-List<Integer> list = seq.feed(new ArrayList<>(), List::add).eval(); // collect to list
+List<Integer> list = seq.feed(new ArrayList<>(), List::add); // collect to list
 ```
 #### collect
 Same as Java `stream.collect(Collectors.toCollection(des))` and Kotlin `sequence.toCollection(des)`, implemented by `feed`. See also `collectBy`.
 ```java
-List<Integer> list = seq.collect(new LinkedList<>()).eval();
+List<Integer> list = seq.collect(new LinkedList<>());
 ```
 #### toList
 Same as Java `stream.collect(Collectors.toList())` and Kotlin `sequence.toList()`, implemented by `collect`.
 ```java
-List<Integer> list = seq.toList().eval();
+List<Integer> list = seq.toList();
 ```
 #### toSet
 Same as Java `stream.collect(Collectors.toSet())` and Kotlin `sequence.toSet()`, implemented by `collect`.
 ```java
-Set<Integer> set = seq.toSet().eval();
+Set<Integer> set = seq.toSet();
 ```
 #### toMap
 Same as Java `stream.collect(Collectors.toMap(...))` and Kotlin `sequence.toMap(...)`, implemented by `feed`.
 ```java
-Map<Integer, String> map = seq.toMap(i -> i, i -> i.toString()).eval();
+Map<Integer, String> map = seq.toMap(i -> i, i -> i.toString());
 ```
 #### toMapBy & toMapWith
 Same as Kotlin `sequence.toMapBy` (creating keys) and `sequence.toMapWith` (creating values), implemented by `feed`.
 ```java
-Map<String, Integer> newKeysMap = seq.toMapBy(i -> i.toString()).eval();
-Map<Integer, String> newValuesMap = seq.toMapWith(i -> i.toString()).eval();
+Map<String, Integer> newKeysMap = seq.toMapBy(i -> i.toString());
+Map<Integer, String> newValuesMap = seq.toMapWith(i -> i.toString());
 ```
 #### groupBy
-Much like Java `stream.collect(Collectors.groupingBy(...))` and Kotlin `sequence.groupingBy`. See also `Grouping.fold`, `Grouping.feed`. But the collecting target is not `List` or `Collection` or `Map`. It is a lazy `Folder` defined by a lambda expression. In other words, you can still consider the elements of each group as a `Seq` and fold them as usual.
+Much like Java `stream.collect(Collectors.groupingBy(...))` and Kotlin `sequence.groupingBy`.
 ```java
-Map<Integer, List<Integer>> listMap = seq.groupBy(i -> i % 2, f -> f.toList()).eval();
-Map<Integer, Set<Integer>> setMap = seq.groupBy(i -> i % 2, f -> f.toSet()).eval();
-Map<Integer, Map<Integer, String>> mapMap = seq.groupBy(i -> i % 2, f -> f.toMapWith(i -> i.toString())).eval();
+Map<Integer, List<Integer>> listMap = seq.groupBy(i -> i % 2, f -> f.toList());
 ```
 #### join
 Same as Java `stream.collect(Collectors.joining(sep))` and Kotlin `sequence.joiningToString`, implemented by `feed`.
 ```java
-String s1 = seq.join(",").eval();
-String s2 = seq.join(",", i -> "10" + i).eval();
+String s1 = seq.join(",");
+String s2 = seq.join(",", i -> "10" + i);
 ```
 #### first
 Same as Java `stream.findFirst` and Kotlin `sequence.first`. See also `firstNot`, `firstNotNull`.
 ```java
-Integer first = seq.first().eval();
-Integer firstOdd = seq.first(i -> i % 2 > 0).eval();
+Integer first = seq.first();
+Integer firstOdd = seq.first(i -> i % 2 > 0);
 ```
 #### last
 Same as Kotlin `sequence.last`.
 ```java
-Integer last = seq.last().eval();
+Integer last = seq.last();
 ```
 #### any & anyNot & all & none
 Same as Java `stream.anyMatch`, `stream.allMatch`, `stream.noneMatch` and Kotlin `sequence.any`, `sequence.all`, `sequence.none`.
 ```java
-boolean anyOdd = seq.any(i -> i % 2 > 0).eval();
-boolean anyEven = seq.anyNot(i -> i % 2 > 0).eval();
-boolean allOdd = seq.all(i -> i % 2 > 0).eval();
-boolean noneOdd = seq.none(i -> i % 2 > 0).eval();
+boolean anyOdd = seq.any(i -> i % 2 > 0);
+boolean anyEven = seq.anyNot(i -> i % 2 > 0);
+boolean allOdd = seq.all(i -> i % 2 > 0);
+boolean noneOdd = seq.none(i -> i % 2 > 0);
 ```
 #### count & sum & average
 Same as Java `stream.count`, `stream.mapToInt(...).sum`, `stream.mapToInt(...).average` and Kotlin `sequence.count`, `sequence.sum`, `sequence.average`.
 ```java
-int count = seq.count().eval();
-int countOdd = seq.count(i -> i % 2 > 0).eval();
-int sum = seq.sum(i -> i).eval();
-double avg = seq.average(i -> i).eval();
-double weightedAvg = seq.average(i -> i, i -> i).eval();
+int count = seq.count();
+int countOdd = seq.count(i -> i % 2 > 0);
+int sum = seq.sum(i -> i);
+double avg = seq.average(i -> i);
+double weightedAvg = seq.average(i -> i, i -> i);
 ```
 #### max & min
 Same as Java `stream.max` and Kotlin `sequence.max`. See also `maxBy`, `maxWith`.
 ```java
-Integer max = seq.max(Integer::compareTo).eval();
-Integer min = seq.maxBy(i -> -i).eval();
-Pair<Integer, Integer> minWithValue = seq.maxWith(i -> -i).eval();
+Integer max = seq.max(Integer::compareTo);
+Integer min = seq.maxBy(i -> -i);
+Pair<Integer, Integer> minWithValue = seq.maxWith(i -> -i);
 ```
 #### sort & sortOn & sortBy
 Same as Java `stream.sort` and Kotlin `sequence.sort` series.
 ```java
-Seq<Integer> s1 = seq.sort().eval(); // 1, 1, 2, 3, 4
-Seq<Integer> s2 = seq.sortOn(Integer::compareTo).eval(); // 1, 1, 2, 3, 4
-Seq<Integer> s3 = seq.sortDesc().eval(); // 4, 3, 2, 1, 1
-Seq<Integer> s4 = seq.sortDesc(Integer::compareTo).eval(); // 4, 3, 2, 1, 1
-Seq<Integer> s5 = seq.sortBy(i -> 10 - i).eval(); // 4, 3, 2, 1, 1
-Seq<Integer> s6 = seq.sortDescBy(i -> 10 - i).eval(); // 1, 1, 2, 3, 4
+Seq<Integer> s1 = seq.sort(); // 1, 1, 2, 3, 4
+Seq<Integer> s2 = seq.sortOn(Integer::compareTo); // 1, 1, 2, 3, 4
+Seq<Integer> s3 = seq.sortDesc(); // 4, 3, 2, 1, 1
+Seq<Integer> s4 = seq.sortDesc(Integer::compareTo); // 4, 3, 2, 1, 1
+Seq<Integer> s5 = seq.sortBy(i -> 10 - i); // 4, 3, 2, 1, 1
+Seq<Integer> s6 = seq.sortDescBy(i -> 10 - i); // 1, 1, 2, 3, 4
 ```
 
 ## Usage
