@@ -10,15 +10,15 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author wolray
  */
 public class TreeSearchTest {
-    static int n = 6, m = 5, maxSize = n + m - 1;
+    static int n = 6, m = 5, maxSize = 2 * (n + m - 1);
 
     private Seq<int[]> next(int[] path) {
-        int n = 7, m = 4;
         int len = path.length;
         int x = path[len - 2];
         int y = path[len - 1];
@@ -28,13 +28,13 @@ public class TreeSearchTest {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-            if (x < n) {
+            if (x < n - 1) {
                 int[] next = Arrays.copyOf(path, len + 2);
                 next[len] = x + 1;
                 next[len + 1] = y;
                 c.accept(next);
             }
-            if (y < m) {
+            if (y < m - 1) {
                 int[] next = Arrays.copyOf(path, len + 2);
                 next[len] = x;
                 next[len + 1] = y + 1;
@@ -50,21 +50,23 @@ public class TreeSearchTest {
     @Test
     @Benchmark
     public void testSync() {
-        Seq.ofTree(new int[]{0, 0}, this::next)
+        Pair<int[], Integer> pair = Seq.ofTree(new int[]{0, 0}, this::next)
             .filter(a -> a.length == maxSize)
             .min(this::eval);
+        System.out.println(Arrays.toString(pair.first));
     }
 
     @Test
     @Benchmark
     public void testAsync() {
-        Seq.ofTreeParallel(new int[]{0, 0}, this::next)
+        AtomicReference<Pair<int[], Integer>> pair = Seq.ofTreeParallel(new int[]{0, 0}, this::next)
             .filter(a -> a.length == maxSize)
             .minAsync(Integer.MAX_VALUE, this::eval);
+        System.out.println(Arrays.toString(pair.get().first));
     }
 
-    @Test
-    public void test() throws RunnerException {
+//    @Test
+    public void benchmark() throws RunnerException {
         Options options = new OptionsBuilder()
             .include(TreeSearchTest.class.getSimpleName())
             .warmupIterations(1)

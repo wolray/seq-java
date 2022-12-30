@@ -3,6 +3,7 @@ package com.github.wolray.seq;
 import java.util.*;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
 /**
@@ -511,13 +512,16 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return fold(null, (f, t) -> f == null || comparator.compare(f, t) < 0 ? t : f);
     }
 
-    default <V extends Comparable<V>> ConcurrentPair<T, V> maxAsync(V initValue, Function<T, V> function) {
-        return feed(new ConcurrentPair<>(null, initValue), (p, t) -> {
+    default <V extends Comparable<V>> AtomicReference<Pair<T, V>> maxAsync(V initValue, Function<T, V> function) {
+        return feed(new AtomicReference<>(new Pair<>(null, initValue)), (ref, t) -> {
             V v = function.apply(t);
-            if (p.getSecond().compareTo(v) < 0) {
-                p.setFirst(t);
-                p.setSecond(v);
-            }
+            ref.getAndUpdate(p -> {
+                if (p.second.compareTo(v) < 0) {
+                    p.first = t;
+                    p.second = v;
+                }
+                return p;
+            });
         });
     }
 
@@ -535,13 +539,16 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return fold(null, (f, t) -> f == null || comparator.compare(f, t) > 0 ? t : f);
     }
 
-    default <V extends Comparable<V>> ConcurrentPair<T, V> minAsync(V initValue, Function<T, V> function) {
-        return feed(new ConcurrentPair<>(null, initValue), (p, t) -> {
+    default <V extends Comparable<V>> AtomicReference<Pair<T, V>> minAsync(V initValue, Function<T, V> function) {
+        return feed(new AtomicReference<>(new Pair<>(null, initValue)), (ref, t) -> {
             V v = function.apply(t);
-            if (p.getSecond().compareTo(v) > 0) {
-                p.setFirst(t);
-                p.setSecond(v);
-            }
+            ref.getAndUpdate(p -> {
+                if (p.second.compareTo(v) > 0) {
+                    p.first = t;
+                    p.second = v;
+                }
+                return p;
+            });
         });
     }
 
