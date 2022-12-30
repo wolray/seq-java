@@ -226,7 +226,7 @@ public interface IntSeq extends Seq0<IntConsumer> {
         tillStop(t -> {
             if (predicate.test(t)) {
                 m.it = function.apply(t);
-                Seq0.stop();
+                stop();
             }
         });
         return m.it;
@@ -361,7 +361,7 @@ public interface IntSeq extends Seq0<IntConsumer> {
             if (i < n) {
                 c.accept(t);
             } else {
-                Seq0.stop();
+                stop();
             }
         });
     }
@@ -371,7 +371,7 @@ public interface IntSeq extends Seq0<IntConsumer> {
             if (predicate.test(t)) {
                 c.accept(t);
             } else {
-                Seq0.stop();
+                stop();
             }
         });
     }

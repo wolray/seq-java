@@ -308,7 +308,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         tillStop(t -> {
             if (predicate.test(t)) {
                 m.it = function.apply(t);
-                Seq0.stop();
+                stop();
             }
         });
         return m.it;
@@ -345,7 +345,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
 
     default <E> E fold(E init, BiFunction<E, T, E> function) {
         Mutable<E> m = new Mutable<>(init);
-        supply(t -> m.it = function.apply(m.it, t));
+        tillStop(t -> m.it = function.apply(m.it, t));
         return m.it;
     }
 
@@ -393,20 +393,10 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
     }
 
     default <K, V> SeqMap<K, BatchList<V>> groupBy(Function<T, K> kFunction, Function<T, V> vFunction) {
-        return groupByFeed(kFunction, BatchList::new, (ls, t) -> ls.add(vFunction.apply(t)));
-    }
-
-    default <K, V> SeqMap<K, V> groupByFold(Function<T, K> kFunction, Supplier<V> init, BiFunction<V, T, V> folder) {
-        Map<K, Mutable<V>> map = groupByFeed(kFunction, () -> new Mutable<>(init.get()),
-            (m, t) -> m.it = folder.apply(m.it, t));
-        return new SeqMap<>(map).replaceValue(m -> m.it);
-    }
-
-    default <K, V> SeqMap<K, V> groupByFeed(Function<T, K> kFunction, Supplier<V> des, BiConsumer<V, T> feeder) {
-        Function<K, V> mappingFunction = k -> des.get();
-        Map<K, V> map = feed(new HashMap<>(), (m, t) -> {
-            V v = m.computeIfAbsent(kFunction.apply(t), mappingFunction);
-            feeder.accept(v, t);
+        Function<K, BatchList<V>> mappingFunction = k -> new BatchList<>();
+        Map<K, BatchList<V>> map = feed(new HashMap<>(), (m, t) -> {
+            BatchList<V> list = m.computeIfAbsent(kFunction.apply(t), mappingFunction);
+            list.add(vFunction.apply(t));
         });
         return new SeqMap<>(map);
     }
@@ -570,17 +560,6 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
             (predicate.test(t) ? p.first : p.second).add(t));
     }
 
-    default <E> Pair<E, E> partitionByFeed(Predicate<T> predicate, Supplier<E> supplier, BiConsumer<E, T> consumer) {
-        return feed(new Pair<>(supplier.get(), supplier.get()), (p, t) ->
-            consumer.accept((predicate.test(t) ? p.first : p.second), t));
-    }
-
-    default <E> Pair<E, E> partitionByFold(Predicate<T> predicate, E init, BiFunction<E, T, E> function) {
-        Pair<Mutable<E>, Mutable<E>> pair = partitionByFeed(predicate, () -> new Mutable<>(init),
-            (m, t) -> m.it = function.apply(m.it, t));
-        return new Pair<>(pair.first.it, pair.second.it);
-    }
-
     default void printAll() {
         printAll(",");
     }
@@ -654,7 +633,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
             if (i < n) {
                 c.accept(t);
             } else {
-                Seq0.stop();
+                stop();
             }
         });
     }
@@ -666,7 +645,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
                 c.accept(t);
                 return e;
             } else {
-                return Seq0.stop();
+                return stop();
             }
         });
     }
@@ -680,7 +659,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
             if (predicate.test(t)) {
                 c.accept(t);
             } else {
-                Seq0.stop();
+                stop();
             }
         });
     }
@@ -800,7 +779,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
                 if (bi.hasNext() && ci.hasNext()) {
                     c.accept(new Triple<>(t, bi.next(), ci.next()));
                 } else {
-                    Seq0.stop();
+                    stop();
                 }
             });
         };
@@ -811,7 +790,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
             if (itr.hasNext()) {
                 c.accept(function.apply(t, itr.next()));
             } else {
-                Seq0.stop();
+                stop();
             }
         });
     }
@@ -825,7 +804,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
             if (itr.hasNext()) {
                 consumer.accept(t, itr.next());
             } else {
-                Seq0.stop();
+                stop();
             }
         });
     }

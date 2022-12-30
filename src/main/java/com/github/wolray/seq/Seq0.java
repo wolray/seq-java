@@ -6,7 +6,7 @@ package com.github.wolray.seq;
 public interface Seq0<C> {
     void supply(C consumer);
 
-    static <T> T stop() {
+    default <T> T stop() {
         throw StopException.INSTANCE;
     }
 
