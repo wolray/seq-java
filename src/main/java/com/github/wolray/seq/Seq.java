@@ -2,6 +2,7 @@ package com.github.wolray.seq;
 
 import java.util.*;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
 import java.util.function.*;
 
 /**
@@ -149,7 +150,14 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
     }
 
     default Seq<T> cache() {
-        return toBatchList();
+        return cache(BatchList.DEFAULT_BATCH_SIZE);
+    }
+
+    default Seq<T> cache(int batchSize) {
+        if (this instanceof BackedSeq || this instanceof AdderList) {
+            return this;
+        }
+        return toBatchList(batchSize);
     }
 
     default Seq<T> cacheBy(Cache<T> cache) {
@@ -551,7 +559,9 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
     default ParallelSeq<T> parallel() {
         return this instanceof ParallelSeq ? (ParallelSeq<T>)this : c -> {
             ForkJoinPool pool = new ForkJoinPool();
-            supply(t -> pool.submit(() -> c.accept(t)));
+            map(t -> pool.submit(() -> c.accept(t)))
+                .cache()
+                .supply(WithCe.acceptor(ForkJoinTask::join));
         };
     }
 

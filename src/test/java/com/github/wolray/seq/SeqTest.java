@@ -4,6 +4,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -193,6 +194,7 @@ public class SeqTest {
         seq.duplicateEach(2).assertTo("1,1,2,2,3,3,4,4");
         seq.duplicateAll(2).assertTo("1,2,3,4,1,2,3,4");
         seq.circle().take(7).assertTo("1,2,3,4,1,2,3");
+        System.out.println(seq.duplicateAll(4).parallel().collect(new LinkedBlockingQueue<>()));
 
         IntSeq is = IntSeq.of(1, 2, 3, 4);
         is.duplicateIf(2, i -> i % 2 > 0).boxed().assertTo("1,1,2,3,3,4");
