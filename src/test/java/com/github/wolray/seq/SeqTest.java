@@ -234,6 +234,7 @@ public class SeqTest {
         n2.left = n5;
         Seq<Node> seq = Seq.ofTree(n0, n -> Seq.of(n.left, n.right));
         seq.map(n -> n.value).assertTo("0,1,3,4,2,5");
+        Seq.ofTreeParallel(n0, n -> Seq.of(n.left, n.right)).map(n -> n.value).printAll(",");
     }
 
     static class Node {

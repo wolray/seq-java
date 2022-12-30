@@ -313,6 +313,10 @@ public interface IntSeq extends Seq0<IntConsumer> {
         return c -> supply(t -> c.accept(function.applyAsInt(t)));
     }
 
+    default IntSeq mapIndexed(IntBinaryOperator function) {
+        return c -> foldIndexed((i, t) -> c.accept(function.applyAsInt(i, t)));
+    }
+
     default <E> Seq<E> mapToObj(IntFunction<E> function) {
         return c -> supply(t -> c.accept(function.apply(t)));
     }

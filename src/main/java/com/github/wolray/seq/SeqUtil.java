@@ -1,6 +1,8 @@
 package com.github.wolray.seq;
 
 import java.util.*;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -33,6 +35,16 @@ public class SeqUtil {
         if (node != null) {
             c.accept(node);
             sub.apply(node).supply(n -> scanTree(c, n, sub));
+        }
+    }
+
+    public static <N> void scanTreeParallel(Consumer<N> c, ForkJoinPool pool, N node, Function<N, Seq<N>> sub) {
+        if (node != null) {
+            pool.submit(() -> c.accept(node)).join();
+            sub.apply(node)
+                .map(n -> pool.submit(() -> scanTreeParallel(c, pool, n, sub)))
+                .cache()
+                .supply(ForkJoinTask::join);
         }
     }
 

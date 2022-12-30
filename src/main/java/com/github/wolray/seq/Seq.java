@@ -59,6 +59,10 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return c -> SeqUtil.scanTree(c, node, sub);
     }
 
+    static <N> ParallelSeq<N> ofTreeParallel(N root, Function<N, Seq<N>> sub) {
+        return c -> SeqUtil.scanTreeParallel(c, new ForkJoinPool(), root, sub);
+    }
+
     static <T> Seq<T> repeat(int n, T t) {
         return c -> {
             for (int i = 0; i < n; i++) {
@@ -489,18 +493,34 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return c -> supply(t -> c.accept(function.applyAsInt(t)));
     }
 
+    default <V extends Comparable<V>> Pair<T, V> max(Function<T, V> function) {
+        return feed(new Pair<>(null, null), (p, t) -> {
+            V v = function.apply(t);
+            if (p.first == null || p.second.compareTo(v) < 0) {
+                p.first = t;
+                p.second = v;
+            }
+        });
+    }
+
     default T max(Comparator<T> comparator) {
         return fold(null, (f, t) -> f == null || comparator.compare(f, t) < 0 ? t : f);
     }
 
-    default <V extends Comparable<V>> T maxBy(Function<T, V> function) {
-        return maxWith(function).first;
+    default <V extends Comparable<V>> ConcurrentPair<T, V> maxAsync(V initValue, Function<T, V> function) {
+        return feed(new ConcurrentPair<>(null, initValue), (p, t) -> {
+            V v = function.apply(t);
+            if (p.getSecond().compareTo(v) < 0) {
+                p.setFirst(t);
+                p.setSecond(v);
+            }
+        });
     }
 
-    default <V extends Comparable<V>> Pair<T, V> maxWith(Function<T, V> function) {
+    default <V extends Comparable<V>> Pair<T, V> min(Function<T, V> function) {
         return feed(new Pair<>(null, null), (p, t) -> {
             V v = function.apply(t);
-            if (p.first == null || p.second.compareTo(v) < 0) {
+            if (p.first == null || p.second.compareTo(v) > 0) {
                 p.first = t;
                 p.second = v;
             }
@@ -511,16 +531,12 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return fold(null, (f, t) -> f == null || comparator.compare(f, t) > 0 ? t : f);
     }
 
-    default <V extends Comparable<V>> T minBy(Function<T, V> function) {
-        return minWith(function).first;
-    }
-
-    default <V extends Comparable<V>> Pair<T, V> minWith(Function<T, V> function) {
-        return feed(new Pair<>(null, null), (p, t) -> {
+    default <V extends Comparable<V>> ConcurrentPair<T, V> minAsync(V initValue, Function<T, V> function) {
+        return feed(new ConcurrentPair<>(null, initValue), (p, t) -> {
             V v = function.apply(t);
-            if (p.first == null || p.second.compareTo(v) > 0) {
-                p.first = t;
-                p.second = v;
+            if (p.getSecond().compareTo(v) > 0) {
+                p.setFirst(t);
+                p.setSecond(v);
             }
         });
     }
@@ -570,16 +586,16 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
             (predicate.test(t) ? p.first : p.second).add(t));
     }
 
-    default void printAll() {
-        printAll(",");
-    }
-
     default void printAll(String sep) {
         if ("\n".equals(sep)) {
-            supply(System.out::println);
+            println();
         } else {
             System.out.println(join(sep));
         }
+    }
+
+    default void println() {
+        supply(System.out::println);
     }
 
     default SeqList<T> reverse() {
