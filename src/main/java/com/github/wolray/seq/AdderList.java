@@ -132,6 +132,7 @@ public interface AdderList<E> extends Seq<E>, List<E> {
         if (isEmpty()) {
             return "[]";
         }
-        return join(", ", e -> e == this ? "(this)" : String.valueOf(e)).format("[%s]").eval();
+        String join = join(", ", e -> e == this ? "(this)" : String.valueOf(e));
+        return String.format("[%s]", join);
     }
 }

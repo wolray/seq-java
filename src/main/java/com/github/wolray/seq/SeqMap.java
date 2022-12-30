@@ -55,19 +55,19 @@ public class SeqMap<K, V> extends BackedSeq<Map.Entry<K, V>, Set<Map.Entry<K, V>
     }
 
     public <E> SeqMap<E, V> mapByKey(BiFunction<K, V, E> function) {
-        return new SeqMap<>(toMap(newMap(map), e -> function.apply(e.getKey(), e.getValue()), Map.Entry::getValue).eval());
+        return new SeqMap<>(toMap(newMap(map), e -> function.apply(e.getKey(), e.getValue()), Map.Entry::getValue));
     }
 
     public <E> SeqMap<E, V> mapByKey(Function<K, E> function) {
-        return new SeqMap<>(toMap(newMap(map), e -> function.apply(e.getKey()), Map.Entry::getValue).eval());
+        return new SeqMap<>(toMap(newMap(map), e -> function.apply(e.getKey()), Map.Entry::getValue));
     }
 
     public <E> SeqMap<K, E> mapByValue(BiFunction<K, V, E> function) {
-        return new SeqMap<>(toMap(newMap(map), Map.Entry::getKey, e -> function.apply(e.getKey(), e.getValue())).eval());
+        return new SeqMap<>(toMap(newMap(map), Map.Entry::getKey, e -> function.apply(e.getKey(), e.getValue())));
     }
 
     public <E> SeqMap<K, E> mapByValue(Function<V, E> function) {
-        return new SeqMap<>(toMap(newMap(map), Map.Entry::getKey, e -> function.apply(e.getValue())).eval());
+        return new SeqMap<>(toMap(newMap(map), Map.Entry::getKey, e -> function.apply(e.getValue())));
     }
 
     @SuppressWarnings("unchecked")

@@ -8,19 +8,13 @@ import java.util.function.Supplier;
  * @author wolray
  */
 public abstract class Folder<E, T> implements Consumer<T>, Supplier<E> {
-    private final Seq<T> seq;
-
-    public Folder(Seq<T> seq) {
-        this.seq = seq;
-    }
-
-    public E eval() {
+    public E eval(Seq<T> seq) {
         seq.tillStop(this);
         return get();
     }
 
     public <R> Folder<R, T> map(Function<E, R> function) {
-        return new Folder<R, T>(seq) {
+        return new Folder<R, T>() {
             @Override
             public void accept(T t) {
                 Folder.this.accept(t);

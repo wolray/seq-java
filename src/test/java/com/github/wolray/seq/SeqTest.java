@@ -14,7 +14,7 @@ public class SeqTest {
     @Test
     public void testResult() {
         Seq<Integer> seq1 = Seq.of(0, 2, 4, 1, 6, 3, 8, 10, 11, 12);
-        Seq<Integer> filtered1 = seq1.take(5).commit();
+        Seq<Integer> filtered1 = seq1.take(5);
         filtered1.assertTo("0,2,4,1,6");
         filtered1.assertTo("0,2,4,1,6");
 
@@ -30,7 +30,7 @@ public class SeqTest {
         seq1.take(5).assertTo("0,2,4,1,6");
         seq1.take(5).drop(2).assertTo("4,1,6");
 
-        Seq<Integer> token1 = Seq.tillNull(() -> 1).take(5).commit();
+        Seq<Integer> token1 = Seq.tillNull(() -> 1).take(5);
         token1.assertTo("1,1,1,1,1");
         token1.assertTo("1,1,1,1,1");
         IntSeq token2 = IntSeq.gen(() -> 1).take(5);
@@ -54,7 +54,7 @@ public class SeqTest {
     @Test
     public void partitionTest() {
         Seq<Integer> seq = Seq.of(0, 2, 4, 1, 6, 3, 5, 7, 10, 11, 12);
-        Pair<BatchList<Integer>, BatchList<Integer>> pair1 = seq.partition(i -> (i & 1) > 0).eval();
+        Pair<BatchList<Integer>, BatchList<Integer>> pair1 = seq.partition(i -> (i & 1) > 0);
         pair1.first.assertTo("1,3,5,7,11");
         pair1.second.assertTo("0,2,4,6,10,12");
     }
@@ -62,7 +62,7 @@ public class SeqTest {
     @Test
     public void testChunked() {
         List<Integer> list = Arrays.asList(0, 2, 4, 1, 6, 3, 5, 7, 10, 11, 12);
-        Function<SeqList<Integer>, String> function = s -> s.join(",").eval();
+        Function<SeqList<Integer>, String> function = s -> s.join(",");
         Seq.of(list).chunked(2).map(function).assertTo("|", "0,2|4,1|6,3|5,7|10,11|12");
         Seq.of(list).chunked(3).map(function).assertTo("|", "0,2,4|1,6,3|5,7,10|11,12");
         Seq.of(list).chunked(4).map(function).assertTo("|", "0,2,4,1|6,3,5,7|10,11,12");
@@ -72,14 +72,14 @@ public class SeqTest {
 
     @Test
     public void testYield() {
-        Seq<Integer> fib1 = Seq.gen(1, 1, Integer::sum).take(10).commit();
+        Seq<Integer> fib1 = Seq.gen(1, 1, Integer::sum).take(10);
         fib1.assertTo("1,1,2,3,5,8,13,21,34,55");
         fib1.assertTo("1,1,2,3,5,8,13,21,34,55");
         IntSeq fib2 = IntSeq.gen(1, 1, Integer::sum).take(10);
         fib2.boxed().assertTo("1,1,2,3,5,8,13,21,34,55");
         fib2.boxed().assertTo("1,1,2,3,5,8,13,21,34,55");
 
-        Seq<Integer> quad1 = Seq.gen(1, i -> i * 2).take(10).commit();
+        Seq<Integer> quad1 = Seq.gen(1, i -> i * 2).take(10);
         quad1.assertTo("1,2,4,8,16,32,64,128,256,512");
         quad1.assertTo("1,2,4,8,16,32,64,128,256,512");
         IntSeq quad2 = IntSeq.gen(1, i -> i * 2).take(10);
@@ -140,7 +140,8 @@ public class SeqTest {
     public void testSubLists() {
         IntSeq.of("233(ab:c)114514(d:e:f:g)42")
             .mapToObj(i -> (char)i)
-            .mapSub('(', ')', f -> f.join(""))
+            .mapSub('(', ')')
+            .map(ls -> ls.join(""))
             .assertTo("(ab:c),(d:e:f:g)");
     }
 
@@ -155,8 +156,8 @@ public class SeqTest {
     @Test
     public void testToArray() {
         Seq<Integer> seq = Seq.of(1, 1, 2, 3, 4, 6);
-        Seq.of(seq.toObjArray(Integer[]::new).eval()).assertTo("1,1,2,3,4,6");
-        IntSeq.of(seq.toIntArray(i -> i).eval()).boxed().assertTo("1,1,2,3,4,6");
+        Seq.of(seq.toObjArray(Integer[]::new)).assertTo("1,1,2,3,4,6");
+        IntSeq.of(seq.toIntArray(i -> i)).boxed().assertTo("1,1,2,3,4,6");
     }
 
     @Test
@@ -169,22 +170,19 @@ public class SeqTest {
             new Triple<>("john", 2009, "success"),
             new Triple<>("chris", 2007, "fail"),
             new Triple<>("john", 2005, "fail"));
-        seq.map(t -> t.first + t.second)
-            .groupBy(t -> t.charAt(0), s -> s.map(it -> it.substring(4)).sorted()).eval()
-            .assertTo("c=[s2007, s2013],j=[2005, 2009, 2012, 2013, 2015]");
-        seq.groupBy(t -> t.first, s -> s.map(t -> t.second).sorted()).eval()
-            .assertTo("chris=[2007, 2013],john=[2005, 2009, 2012, 2013, 2015]");
+        seq.groupBy(t -> t.first, t -> t.second)
+            .assertTo("chris=[2013, 2007],john=[2015, 2013, 2012, 2009, 2005]");
     }
 
     @Test
     public void testPair() {
         Seq<Integer> seq = Seq.of(1, 2, 3, 4, 5, 6, 7);
-        Seq<String> seq1 = seq.mapPair(false, (p1, p2) -> p1 + "+" + p2).commit();
+        Seq<String> seq1 = seq.mapPair(false, (p1, p2) -> p1 + "+" + p2);
         seq1.assertTo("1+2,3+4,5+6");
-        assert "5+6".equals(seq1.last().eval());
-        Seq<String> seq2 = seq.mapPair(true, (p1, p2) -> p1 + "+" + p2).commit();
+        assert "5+6".equals(seq1.last());
+        Seq<String> seq2 = seq.mapPair(true, (p1, p2) -> p1 + "+" + p2);
         seq2.assertTo("1+2,2+3,3+4,4+5,5+6,6+7");
-        assert "6+7".equals(seq2.last().eval());
+        assert "6+7".equals(seq2.last());
     }
 
     @Test
@@ -205,15 +203,15 @@ public class SeqTest {
     @Test
     public void testSeqMap() {
         Seq.of(1, 2, 3, 4)
-            .toMapWith(i -> i).eval()
-            .replaceValue(Object::toString)
-            .assertTo("1=1,2=2,3=3,4=4");
+            .toMapWith(i -> i)
+            .replaceValue(i -> i + 1)
+            .assertTo("1=2,2=3,3=4,4=5");
         Seq.of(1, 2, 3, 4)
-            .toMapWith(i -> i).eval()
+            .toMapWith(i -> i)
             .replaceValue(i -> i / 10.0)
             .assertTo("1=0.1,2=0.2,3=0.3,4=0.4");
         Seq.of(1, 2, 3, 4)
-            .toMapWith(i -> i).eval()
+            .toMapWith(i -> i)
             .replaceValue((k, i) -> k + i / 10.0)
             .assertTo("1=1.1,2=2.2,3=3.3,4=4.4");
     }

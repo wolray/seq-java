@@ -31,16 +31,16 @@ public abstract class SafeSeq<T> implements Seq<T> {
     }
 
     @Override
-    public <E> Transformer<T, E> map(Function<T, E> function) {
+    public <E> Seq<E> map(Function<T, E> function) {
         return map(0, function);
     }
 
-    public <E> Transformer<T, E> map(int skip, Function<T, E> function) {
-        return mapping(c -> foldIndexed((i, t) -> {
+    public <E> Seq<E> map(int skip, Function<T, E> function) {
+        return c -> foldIndexed((i, t) -> {
             if (i > skip || i == skip && !isProcessed(function, t)) {
                 c.accept(function.apply(t));
             }
-        }));
+        });
     }
 
     private static <T, E> boolean isProcessed(Function<T, E> function, T t) {
