@@ -226,7 +226,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
     }
 
     default Seq<T> distinct() {
-        return distinctBy(it -> it);
+        return distinctBy(t -> t);
     }
 
     default <E> Seq<T> distinctBy(Function<T, E> function) {
@@ -421,10 +421,8 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
 
     default <K, V> SeqMap<K, BatchList<V>> groupBy(Function<T, K> kFunction, Function<T, V> vFunction) {
         Function<K, BatchList<V>> mappingFunction = k -> new BatchList<>();
-        Map<K, BatchList<V>> map = feed(new HashMap<>(), (m, t) -> {
-            BatchList<V> list = m.computeIfAbsent(kFunction.apply(t), mappingFunction);
-            list.add(vFunction.apply(t));
-        });
+        Map<K, BatchList<V>> map = feed(new HashMap<>(), (m, t) ->
+            m.computeIfAbsent(kFunction.apply(t), mappingFunction).add(vFunction.apply(t)));
         return new SeqMap<>(map);
     }
 
@@ -433,8 +431,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
     }
 
     default String join(String sep, Function<T, String> function) {
-        StringJoiner joiner = feed(new StringJoiner(sep), (j, t) -> j.add(function.apply(t)));
-        return joiner.toString();
+        return feed(new StringJoiner(sep), (j, t) -> j.add(function.apply(t))).toString();
     }
 
     default T last() {
@@ -682,11 +679,11 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
     }
 
     default <E> Seq<T> takeWhile(Function<T, E> function, BiPredicate<E, E> testPrevCurr) {
-        return c -> fold((E)null, (last, t) -> {
-            E e = function.apply(t);
-            if (last == null || testPrevCurr.test(last, e)) {
+        return c -> fold((E)null, (prev, t) -> {
+            E curr = function.apply(t);
+            if (prev == null || testPrevCurr.test(prev, curr)) {
                 c.accept(t);
-                return e;
+                return curr;
             } else {
                 return stop();
             }
