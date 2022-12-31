@@ -61,7 +61,7 @@ public class TreeSearchTest {
     public void testAsync() {
         AtomicReference<Pair<int[], Integer>> pair = Seq.ofTreeParallel(new int[]{0, 0}, this::next)
             .filter(a -> a.length == maxSize)
-            .minAsync(Integer.MAX_VALUE, this::eval);
+            .minAtomic(Integer.MAX_VALUE, this::eval);
         System.out.println(Arrays.toString(pair.get().first));
     }
 

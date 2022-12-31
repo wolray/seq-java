@@ -394,6 +394,12 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return a[0];
     }
 
+    default <E> E foldAtomic(E init, BiFunction<E, T, E> function) {
+        AtomicReference<E> m = new AtomicReference<>(init);
+        tillStop(t -> m.updateAndGet(e -> function.apply(e, t)));
+        return m.get();
+    }
+
     default int foldIndexed(IndexObjConsumer<T> consumer) {
         return foldIndexed(0, consumer);
     }
@@ -512,10 +518,10 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return fold(null, (f, t) -> f == null || comparator.compare(f, t) < 0 ? t : f);
     }
 
-    default <V extends Comparable<V>> AtomicReference<Pair<T, V>> maxAsync(V initValue, Function<T, V> function) {
+    default <V extends Comparable<V>> AtomicReference<Pair<T, V>> maxAtomic(V initValue, Function<T, V> function) {
         return feed(new AtomicReference<>(new Pair<>(null, initValue)), (ref, t) -> {
             V v = function.apply(t);
-            ref.getAndUpdate(p -> {
+            ref.updateAndGet(p -> {
                 if (p.second.compareTo(v) < 0) {
                     p.first = t;
                     p.second = v;
@@ -539,10 +545,10 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return fold(null, (f, t) -> f == null || comparator.compare(f, t) > 0 ? t : f);
     }
 
-    default <V extends Comparable<V>> AtomicReference<Pair<T, V>> minAsync(V initValue, Function<T, V> function) {
+    default <V extends Comparable<V>> AtomicReference<Pair<T, V>> minAtomic(V initValue, Function<T, V> function) {
         return feed(new AtomicReference<>(new Pair<>(null, initValue)), (ref, t) -> {
             V v = function.apply(t);
-            ref.getAndUpdate(p -> {
+            ref.updateAndGet(p -> {
                 if (p.second.compareTo(v) > 0) {
                     p.first = t;
                     p.second = v;
