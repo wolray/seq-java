@@ -31,7 +31,7 @@ public class SeqTest {
         seq1.take(5).assertTo("0,2,4,1,6");
         seq1.take(5).drop(2).assertTo("4,1,6");
 
-        Seq<Integer> token1 = Seq.tillNull(() -> 1).take(5);
+        Seq<Integer> token1 = Seq.gen(() -> 1).take(5);
         token1.assertTo("1,1,1,1,1");
         token1.assertTo("1,1,1,1,1");
         IntSeq token2 = IntSeq.gen(() -> 1).take(5);

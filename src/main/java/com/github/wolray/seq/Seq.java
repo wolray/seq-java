@@ -15,6 +15,14 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return (Seq<T>)Empty.emptySeq;
     }
 
+    static <T> Seq<T> gen(Supplier<T> supplier) {
+        return c -> {
+            while (true) {
+                c.accept(supplier.get());
+            }
+        };
+    }
+
     static <T> Seq<T> gen(T seed, UnaryOperator<T> operator) {
         return c -> {
             T t = seed;
@@ -82,15 +90,11 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
     }
 
     default boolean all(Predicate<T> predicate) {
-        return any(false, predicate.negate());
-    }
-
-    default boolean any(boolean ifFound, Predicate<T> predicate) {
-        return find(!ifFound, predicate, t -> ifFound);
+        return find(true, predicate.negate(), t -> false);
     }
 
     default boolean any(Predicate<T> predicate) {
-        return any(true, predicate);
+        return find(false, predicate, t -> true);
     }
 
     default boolean anyNot(Predicate<T> predicate) {
@@ -335,6 +339,17 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return m.it;
     }
 
+    default <E> E findAtomic(E ifNotFound, Predicate<T> predicate, Function<T, E> function) {
+        AtomicReference<E> ref = new AtomicReference<>(ifNotFound);
+        tillStop(t -> {
+            if (predicate.test(t)) {
+                ref.set(function.apply(t));
+                stop();
+            }
+        });
+        return ref.get();
+    }
+
     default T first() {
         return find(null, t -> true, t -> t);
     }
@@ -454,7 +469,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return c -> foldIndexed((i, t) -> c.accept(function.apply(i, t)));
     }
 
-    default <E> Seq<E> mapNotNll(Function<T, E> function) {
+    default <E> Seq<E> mapNotNull(Function<T, E> function) {
         return c -> supply(t -> {
             E e = function.apply(t);
             if (e != null) {
@@ -556,7 +571,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
     }
 
     default boolean none(Predicate<T> predicate) {
-        return any(false, predicate);
+        return find(true, predicate, t -> false);
     }
 
     default Seq<T> onEach(Consumer<T> consumer) {

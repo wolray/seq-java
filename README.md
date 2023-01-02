@@ -43,7 +43,7 @@ IntSeq seq = IntSeq.range(1, 4, 2); // with step 2 => 1, 3
 ```
 #### Endless supplying
 ```java
-Seq<Integer> seq = Seq.tillNull(() -> 1); // 1, 1, 1, ...
+Seq<Integer> seq = Seq.gen(() -> 1); // 1, 1, 1, ...
 ```
 #### Endless single-seed recursion
 ```java
