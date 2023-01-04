@@ -478,18 +478,14 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         });
     }
 
-    default <E> Seq<E> mapPair(boolean overlapping, BiFunction<T, T, E> function) {
+    default BiSeq<T, T> mapPair(boolean overlapping) {
         return c -> fold((T)null, (last, t) -> {
             if (last != null) {
-                c.accept(function.apply(last, t));
+                c.accept(last, t);
                 return overlapping ? t : null;
             }
             return t;
         });
-    }
-
-    default Seq<Pair<T, T>> mapPair(boolean overlapping) {
-        return mapPair(overlapping, Pair::new);
     }
 
     default Seq<BatchList<T>> mapSub(Predicate<T> first, Predicate<T> last) {
@@ -597,17 +593,26 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         });
     }
 
-    default <E> Seq<Pair<T, E>> pairWith(Function<T, E> function) {
-        return map(t -> new Pair<>(t, function.apply(t)));
+    default <E> BiSeq<T, E> pairWith(Function<T, E> function) {
+        return c -> supply(t -> c.accept(t, function.apply(t)));
     }
 
     default Seq<T> parallel() {
-        return c -> {
-            ForkJoinPool pool = new ForkJoinPool();
-            map(t -> pool.submit(() -> c.accept(t)))
-                .cache()
-                .supply(WithCe.acceptor(ForkJoinTask::join));
-        };
+        return parallel(BatchList.DEFAULT_BATCH_SIZE);
+    }
+
+    default Seq<T> parallel(int batchSize) {
+        return c -> feed(new Pair<>((ForkJoinPool)null, (ArrayList<ForkJoinTask<?>>)null), (p, t) -> {
+            if (p.first == null) {
+                p.first = new ForkJoinPool();
+                p.second = new ArrayList<>(batchSize);
+            }
+            p.second.add(p.first.submit(() -> c.accept(t)));
+            if (p.second.size() >= batchSize) {
+                p.second.forEach(ForkJoinTask::join);
+                p.second.clear();
+            }
+        });
     }
 
     default Pair<BatchList<T>, BatchList<T>> partition(Predicate<T> predicate) {
@@ -840,24 +845,10 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         };
     }
 
-    default <E, R> Seq<R> zip(Iterable<E> iterable, BiFunction<T, E, R> function) {
+    default <E> BiSeq<T, E> zip(Iterable<E> iterable) {
         return c -> feed(iterable.iterator(), (itr, t) -> {
             if (itr.hasNext()) {
-                c.accept(function.apply(t, itr.next()));
-            } else {
-                stop();
-            }
-        });
-    }
-
-    default <E> Seq<Pair<T, E>> zip(Iterable<E> iterable) {
-        return zip(iterable, Pair::new);
-    }
-
-    default <E> void zipWith(Iterable<E> es, BiConsumer<T, E> consumer) {
-        feed(es.iterator(), (itr, t) -> {
-            if (itr.hasNext()) {
-                consumer.accept(t, itr.next());
+                c.accept(t, itr.next());
             } else {
                 stop();
             }

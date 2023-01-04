@@ -179,10 +179,10 @@ public class SeqTest {
     @Test
     public void testPair() {
         Seq<Integer> seq = Seq.of(1, 2, 3, 4, 5, 6, 7);
-        Seq<String> seq1 = seq.mapPair(false, (p1, p2) -> p1 + "+" + p2);
+        Seq<String> seq1 = seq.mapPair(false).map((p1, p2) -> p1 + "+" + p2);
         seq1.assertTo("1+2,3+4,5+6");
         assert "5+6".equals(seq1.last());
-        Seq<String> seq2 = seq.mapPair(true, (p1, p2) -> p1 + "+" + p2);
+        Seq<String> seq2 = seq.mapPair(true).map((p1, p2) -> p1 + "+" + p2);
         seq2.assertTo("1+2,2+3,3+4,4+5,5+6,6+7");
         assert "6+7".equals(seq2.last());
     }
