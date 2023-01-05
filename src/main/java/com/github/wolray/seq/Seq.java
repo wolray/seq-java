@@ -219,15 +219,15 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return feed(bySize.apply(sizeOrDefault()), Collection::add);
     }
 
-    default Integer count() {
+    default int count() {
         return foldInt(0, (i, t) -> i + 1);
     }
 
-    default Integer count(Predicate<T> predicate) {
+    default int count(Predicate<T> predicate) {
         return sumInt(t -> predicate.test(t) ? 1 : 0);
     }
 
-    default Integer countNot(Predicate<T> predicate) {
+    default int countNot(Predicate<T> predicate) {
         return count(predicate.negate());
     }
 
