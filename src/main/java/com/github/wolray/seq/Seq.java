@@ -197,7 +197,9 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
                 ts.backer.add(t);
                 return ts;
             });
-            c.accept(last);
+            if (last != null) {
+                c.accept(last);
+            }
         };
     }
 
@@ -602,17 +604,22 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
     }
 
     default Seq<T> parallel(int batchSize) {
-        return c -> feed(new Pair<>((ForkJoinPool)null, (ArrayList<ForkJoinTask<?>>)null), (p, t) -> {
-            if (p.first == null) {
-                p.first = new ForkJoinPool();
-                p.second = new ArrayList<>(batchSize);
+        return c -> {
+            Pair<ForkJoinPool, ArrayList<ForkJoinTask<?>>> pair = feed(new Pair<>(null, null), (p, t) -> {
+                if (p.first == null) {
+                    p.first = new ForkJoinPool();
+                    p.second = new ArrayList<>(batchSize);
+                }
+                if (p.second.size() >= batchSize) {
+                    p.second.forEach(ForkJoinTask::join);
+                    p.second.clear();
+                }
+                p.second.add(p.first.submit(() -> c.accept(t)));
+            });
+            if (pair.second != null) {
+                pair.second.forEach(ForkJoinTask::join);
             }
-            p.second.add(p.first.submit(() -> c.accept(t)));
-            if (p.second.size() >= batchSize) {
-                p.second.forEach(ForkJoinTask::join);
-                p.second.clear();
-            }
-        });
+        };
     }
 
     default Pair<BatchList<T>, BatchList<T>> partition(Predicate<T> predicate) {

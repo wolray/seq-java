@@ -69,6 +69,7 @@ public class SeqTest {
         Seq.of(list).chunked(4).map(function).assertTo("|", "0,2,4,1|6,3,5,7|10,11,12");
         Seq.of(list).chunked(5).map(function).assertTo("|", "0,2,4,1,6|3,5,7,10,11|12");
         Seq.of(1, 2, 3, 4).chunked(2).map(function).assertTo("|", "1,2|3,4");
+        Seq.empty().chunked(2).assertTo("");
     }
 
     @Test
@@ -194,7 +195,7 @@ public class SeqTest {
         seq.duplicateEach(2).assertTo("1,1,2,2,3,3,4,4");
         seq.duplicateAll(2).assertTo("1,2,3,4,1,2,3,4");
         seq.circle().take(7).assertTo("1,2,3,4,1,2,3");
-        System.out.println(seq.duplicateAll(4).parallel().collect(new LinkedBlockingQueue<>()));
+        System.out.println(seq.duplicateAll(2).parallel(5).collect(new LinkedBlockingQueue<>()));
 
         IntSeq is = IntSeq.of(1, 2, 3, 4);
         is.duplicateIf(2, i -> i % 2 > 0).boxed().assertTo("1,1,2,3,3,4");

@@ -87,8 +87,8 @@ seq = seq.map(i -> i + 10); // 11, 11, 12, 13, 14
 #### mapPair
 Map to paired sequence.
 ```java
-Seq<Pair<Integer, Integer>> adjacent = seq.mapPair(false); // (1,1), (2,3)
-Seq<Pair<Integer, Integer>> overlapping = seq.mapPair(true); // (1,1), (1,2), (2,3), (3,4)
+BiSeq<Integer, Integer> adjacent = seq.mapPair(false); // (1,1), (2,3)
+BiSeq<Integer, Integer> overlapping = seq.mapPair(true); // (1,1), (1,2), (2,3), (3,4)
 ```
 #### circle
 Returns an endless sequence like a circle.
@@ -163,13 +163,13 @@ Seq<IntPair<Integer>> newSeq = seq.withIndex(); // (0,1), (1,1), (2,2), (3,3), (
 #### pairWith
 Attach another value with each element as a pair.
 ```java
-Seq<Pair<Integer, String>> newSeq = seq.pairWith(i -> i.toString()); // (1,"1"), (1,"1"), (2,"2"), (3,"3"), (4,"4")
+BiSeq<Integer, String> newSeq = seq.pairWith(i -> i.toString()); // (1,"1"), (1,"1"), (2,"2"), (3,"3"), (4,"4")
 ```
 #### zip
 Combine with another iterable's element to pairs one-by-one. Same as Kotlin `sequence.zip`.
 ```java
-Seq<Pair<Integer, String>> s1 = seq.zip(Arrays.asList("a", "b", "c", "d", "e")); // (1,"a"), (1,"b"), (2,"c"), (3,"d"), (4,"e") 
-Seq<String> s2 = seq.zip(Arrays.asList("a", "b", "c", "d", "e"), (i, s) -> i + s); // "1a", "1b", "2c", "3d", "4e"
+BiSeq<Integer, String> s1 = seq.zip(Arrays.asList("a", "b", "c", "d", "e")); // (1,"a"), (1,"b"), (2,"c"), (3,"d"), (4,"e") 
+Seq<String> s2 = seq.zip(Arrays.asList("a", "b", "c", "d", "e")).map((i, s) -> i + s); // "1a", "1b", "2c", "3d", "4e"
 ```
 #### onEach
 Same as Java `stream.peek` and Kotlin `sequence.onEach`.
@@ -316,6 +316,6 @@ Then add the dependency.
 <dependency>
     <groupId>com.github.wolray</groupId>
     <artifactId>seq-java</artifactId>
-    <version>1.3.7</version>
+    <version>1.3.8</version>
 </dependency>
 ```
