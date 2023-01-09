@@ -698,7 +698,7 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return foldDouble(0, (d, t) -> d + function.applyAsDouble(t));
     }
 
-    default Integer sumInt(ToIntFunction<T> function) {
+    default int sumInt(ToIntFunction<T> function) {
         return foldInt(0, (i, t) -> i + function.applyAsInt(t));
     }
 
