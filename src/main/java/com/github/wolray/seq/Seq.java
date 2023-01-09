@@ -68,15 +68,15 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return c -> SeqUtil.scanTree(c, node, sub);
     }
 
-    static <N> Seq<N> ofTreeParallel(N root, Function<N, Seq<N>> sub) {
-        return c -> SeqUtil.scanTreeParallel(c, ForkJoinPool.commonPool(), root, sub);
-    }
-
     static <N> Seq<N> ofTreeParallel(int parallelism, N root, Function<N, Seq<N>> sub) {
         return c -> {
             ForkJoinPool pool = new ForkJoinPool(Math.min(parallelism, Runtime.getRuntime().availableProcessors()));
             SeqUtil.scanTreeParallel(c, pool, root, sub);
         };
+    }
+
+    static <N> Seq<N> ofTreeParallel(N root, Function<N, Seq<N>> sub) {
+        return c -> SeqUtil.scanTreeParallel(c, ForkJoinPool.commonPool(), root, sub);
     }
 
     static <T> Seq<T> repeat(int n, T t) {
