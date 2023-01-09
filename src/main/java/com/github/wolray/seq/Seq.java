@@ -72,6 +72,13 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return c -> SeqUtil.scanTreeParallel(c, new ForkJoinPool(), root, sub);
     }
 
+    static <N> Seq<N> ofTreeParallel(int parallelism, N root, Function<N, Seq<N>> sub) {
+        return c -> {
+            ForkJoinPool pool = new ForkJoinPool(Math.min(parallelism, Runtime.getRuntime().availableProcessors()));
+            SeqUtil.scanTreeParallel(c, pool, root, sub);
+        };
+    }
+
     static <T> Seq<T> repeat(int n, T t) {
         return c -> {
             for (int i = 0; i < n; i++) {
@@ -605,19 +612,20 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
 
     default Seq<T> parallel(int batchSize) {
         return c -> {
-            Pair<ForkJoinPool, ArrayList<ForkJoinTask<?>>> pair = feed(new Pair<>(null, null), (p, t) -> {
-                if (p.first == null) {
-                    p.first = new ForkJoinPool();
-                    p.second = new ArrayList<>(batchSize);
+            ForkJoinPool pool = ForkJoinPool.commonPool();
+            List<ForkJoinTask<?>> list = fold(null, (ls, t) -> {
+                if (ls == null) {
+                    ls = new ArrayList<>(batchSize);
                 }
-                if (p.second.size() >= batchSize) {
-                    p.second.forEach(ForkJoinTask::join);
-                    p.second.clear();
+                if (ls.size() >= batchSize) {
+                    ls.forEach(ForkJoinTask::join);
+                    ls.clear();
                 }
-                p.second.add(p.first.submit(() -> c.accept(t)));
+                ls.add(pool.submit(() -> c.accept(t)));
+                return ls;
             });
-            if (pair.second != null) {
-                pair.second.forEach(ForkJoinTask::join);
+            if (list != null) {
+                list.forEach(ForkJoinTask::join);
             }
         };
     }
