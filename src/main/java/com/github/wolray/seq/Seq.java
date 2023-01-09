@@ -584,7 +584,10 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
     }
 
     default Seq<T> onEachIndexed(IndexObjConsumer<T> consumer) {
-        return c -> foldIndexed(consumer);
+        return c -> foldIndexed((i, t) -> {
+            consumer.accept(i, t);
+            c.accept(t);
+        });
     }
 
     default Seq<T> onFirst(Consumer<T> consumer) {
