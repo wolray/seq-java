@@ -16,6 +16,10 @@ public class SeqMap<K, V> extends BackedSeq<Map.Entry<K, V>, Set<Map.Entry<K, V>
         this.map = map;
     }
 
+    public BiSeq<K, V> asBiSeq() {
+        return c -> supply(e -> c.accept(e.getKey(), e.getValue()));
+    }
+
     @Override
     public SeqSet<K> keySet() {
         return new SeqSet<>(map.keySet());
