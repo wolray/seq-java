@@ -39,13 +39,11 @@ public class SeqUtil {
     }
 
     public static <N> void scanTreeParallel(Consumer<N> c, ForkJoinPool pool, N node, Function<N, Seq<N>> sub) {
-        if (node != null) {
-            pool.submit(() -> c.accept(node)).join();
-            sub.apply(node)
-                .map(n -> pool.submit(() -> scanTreeParallel(c, pool, n, sub)))
-                .cache()
-                .supply(ForkJoinTask::join);
-        }
+        pool.submit(() -> c.accept(node)).join();
+        sub.apply(node)
+            .mapNotNull(n -> n != null ? pool.submit(() -> scanTreeParallel(c, pool, n, sub)) : null)
+            .cache()
+            .supply(ForkJoinTask::join);
     }
 
     public static <T> void permute(Consumer<List<T>> c, ArrayList<T> list, int i, boolean inplace) {
