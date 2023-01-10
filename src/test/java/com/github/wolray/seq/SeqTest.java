@@ -172,8 +172,7 @@ public class SeqTest {
             new Triple<>("john", 2009, "success"),
             new Triple<>("chris", 2007, "fail"),
             new Triple<>("john", 2005, "fail"));
-        seq.groupBy(t -> t.first, t -> t.second)
-            .replaceValue(e -> e.sorted())
+        seq.groupBy(t -> t.first, s -> s.map(t -> t.second).sorted())
             .assertTo("chris=[2007, 2013],john=[2005, 2009, 2012, 2013, 2015]");
     }
 

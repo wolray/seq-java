@@ -443,10 +443,14 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return c -> foldIndexed((i, t) -> (i >= n ? c : consumer).accept(t));
     }
 
-    default <K, V> SeqMap<K, BatchList<V>> groupBy(Function<T, K> kFunction, Function<T, V> vFunction) {
-        Function<K, BatchList<V>> mappingFunction = k -> new BatchList<>();
-        Map<K, BatchList<V>> map = feed(new HashMap<>(), (m, t) ->
-            m.computeIfAbsent(kFunction.apply(t), mappingFunction).add(vFunction.apply(t)));
+    default <K, V> SeqMap<K, V> groupBy(Function<T, K> kFunction, Function<Seq<T>, V> vFunction) {
+        return groupBy(kFunction).replaceValue(vFunction::apply);
+    }
+
+    default <K> SeqMap<K, BatchList<T>> groupBy(Function<T, K> kFunction) {
+        Function<K, BatchList<T>> mappingFunction = k -> new BatchList<>();
+        Map<K, BatchList<T>> map = feed(new HashMap<>(), (m, t) ->
+            m.computeIfAbsent(kFunction.apply(t), mappingFunction).add(t));
         return new SeqMap<>(map);
     }
 
