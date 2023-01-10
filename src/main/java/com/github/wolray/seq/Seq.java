@@ -474,6 +474,14 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return c -> supply(t -> c.accept(function.apply(t)));
     }
 
+    default <E> Seq<E> mapIfExists(Function<T, E> function) {
+        return c -> supply(t -> {
+            if (t != null) {
+                c.accept(function.apply(t));
+            }
+        });
+    }
+
     default <E> Seq<E> mapIndexed(IndexObjFunction<T, E> function) {
         return c -> foldIndexed((i, t) -> c.accept(function.apply(i, t)));
     }

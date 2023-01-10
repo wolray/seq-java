@@ -41,7 +41,7 @@ public class SeqUtil {
     public static <N> void scanTreeParallel(Consumer<N> c, ForkJoinPool pool, N node, Function<N, Seq<N>> sub) {
         pool.submit(() -> c.accept(node)).join();
         sub.apply(node)
-            .mapNotNull(n -> n != null ? pool.submit(() -> scanTreeParallel(c, pool, n, sub)) : null)
+            .mapIfExists(n -> pool.submit(() -> scanTreeParallel(c, pool, n, sub)))
             .cache()
             .supply(ForkJoinTask::join);
     }
