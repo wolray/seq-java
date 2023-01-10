@@ -443,6 +443,10 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         return c -> foldIndexed((i, t) -> (i >= n ? c : consumer).accept(t));
     }
 
+    default <K, V> SeqMap<K, V> groupBy(Function<T, K> kFunction, BiFunction<K, Seq<T>, V> vFunction) {
+        return groupBy(kFunction).replaceValue(vFunction::apply);
+    }
+
     default <K, V> SeqMap<K, V> groupBy(Function<T, K> kFunction, Function<Seq<T>, V> vFunction) {
         return groupBy(kFunction).replaceValue(vFunction::apply);
     }
@@ -645,6 +649,11 @@ public interface Seq<T> extends Seq0<Consumer<T>> {
         };
     }
 
+    default <E> Pair<E, E> partition(Predicate<T> predicate, Function<Seq<T>, E> function) {
+        Pair<BatchList<T>, BatchList<T>> pair = partition(predicate);
+        return new Pair<>(function.apply(pair.first), function.apply(pair.second));
+    }
+    
     default Pair<BatchList<T>, BatchList<T>> partition(Predicate<T> predicate) {
         return feed(new Pair<>(new BatchList<>(), new BatchList<>()), (p, t) ->
             (predicate.test(t) ? p.first : p.second).add(t));
